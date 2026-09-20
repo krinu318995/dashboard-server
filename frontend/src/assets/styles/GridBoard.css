@@ -1,0 +1,288 @@
+/* src/components/GridBoard.css */
+
+.grid-board-container {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: 100px; /* ROW_HEIGHT */
+  gap: 10px;
+  background-color: #f0f2f5;
+  padding: 10px;
+  border-radius: 8px;
+  min-height: calc(100vh - 80px); /* Adjust based on your header height */
+  position: relative;
+  background-size: calc(100% / 12) 110px;
+  background-image:
+    linear-gradient(to bottom, #d97e7e 1px, transparent 1px),
+    linear-gradient(to right, #d97e7e 1px, transparent 1px);
+}
+
+.grid-widget-item {
+  background-color: #ffffff;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+}
+
+.grid-widget-item:active {
+  opacity: 0.7;
+  cursor: grabbing;
+}
+
+.widget-title {
+  font-weight: bold;
+  font-size: 14px;
+  color: #1f2937;
+  /* 제목이 너무 길어져서 버튼을 침범하지 않도록 여백 설정 */
+  /* margin-right: 8px; */
+}
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0; /* 구분을 위한 가벼운 밑줄 */
+  padding-bottom: 6px;
+}
+
+.widget-info {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap; /* 👈 글자가 세로로 찌그러지지 않고 한 줄로 나오게 방지 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.widget-memo-content {
+  flex: 1; /* Take up remaining space */
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+  margin-top: 8px;
+  white-space: normal; /* Allow text to wrap */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-y: auto;
+}
+
+/*위젯 삭제*/
+.widget-delete-todos-btn {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 0 4px;
+  transition: color 0.2s;
+}
+
+.widget-delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #9ca3af;
+  line-height: 1;
+  padding: 2px 4px;
+  z-index: 2;
+}
+
+/* 삭제 버튼에 마우스를 올렸을 때만 선명한 빨간색으로 변경 */
+.widget-delete-btn:hover {
+  color: #ff4d4f;
+}
+
+.widget-resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  cursor: se-resize; /* 👈 마우스 커서가 대각선 화살표로 바뀌어야 합니다 */
+  border-right: 2px solid #9ca3af;
+  border-bottom: 2px solid #9ca3af;
+  z-index: 10;
+}
+
+.widget-title-memo {
+  border: none;
+  /* border-bottom: 1px solid #e5e7eb; */
+  outline: none;
+  font-size: 13px;
+  font-weight: bold;
+  background: transparent;
+  color: #111827;
+  width: 100%;
+  flex: 1;
+}
+.widget-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none; /* 테두리 제거 */
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.widget-nav-btn:hover {
+  background-color: #e2e8f0;
+  color: #3b82f6; /* 호버 시 은은한 블루 포인트 */
+}
+
+/*memo widget */
+/* =========================================================
+   ⭐️ 액자 모드 (minimal-frame) Hover 인터랙션 스타일
+   ========================================================= */
+
+/* 1. 액자 모드 카드 컨테이너: 패딩을 없애고 이미지가 꽉 차도록 설정 */
+/* =========================================================
+   ⭐️ 액자 모드 (minimal-frame) - 크기 변화 없는 정적 오버레이
+   ========================================================= */
+
+/* =========================================================
+   ⭐️ GridBoard.css - 헤더 및 삭제 버튼 정렬 보정
+   ========================================================= */
+
+/* 1. 일반 및 액자 모드 공통 삭제 버튼 위치 */
+.widget-delete-btn {
+  position: absolute;
+  top: 8px; /* 👈 헤더 내부 텍스트 높이와 정확히 일치하도록 설정 */
+  right: 10px; /* 👈 우측 패딩과 일치 */
+  z-index: 25; /* 👈 헤더 배경보다 항상 위에 표시 */
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #9ca3af;
+  line-height: 1;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.2s,
+    opacity 0.2s ease;
+}
+
+.widget-delete-btn:hover {
+  color: #ff4d4f;
+}
+
+/* 2. 제목 인풋이 삭제 버튼과 겹치지 않도록 여백 확보 */
+.widget-title-memo {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-weight: bold;
+  background: transparent;
+  color: #111827;
+  width: 100%;
+  padding-right: 24px; /* 👈 X 버튼 자리 확보 */
+  box-sizing: border-box;
+}
+
+/* 3. ⭐️ 액자 모드 (memo-framed-item) 전용 설정 */
+.grid-widget-item.memo-framed-item {
+  padding: 0 !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 액자 모드 헤더: 이미지 상단에 반투명 띠로 오버레이 */
+.grid-widget-item.memo-framed-item .widget-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 34px; /* 높이 고정 */
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+
+  /* 평소 숨김 */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-100%);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* 액자 모드 평상시 삭제 버튼 숨김 */
+.grid-widget-item.memo-framed-item .widget-delete-btn {
+  top: 8px; /* 헤더 높이 34px 기준 정중앙 정렬 */
+  right: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-100%);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* ⭐️ 액자 모드 Hover 시 헤더와 삭제 버튼이 함께 슬라이드 다운 */
+.grid-widget-item.memo-framed-item:hover .widget-header,
+.grid-widget-item.memo-framed-item:focus-within .widget-header {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.grid-widget-item.memo-framed-item:hover .widget-delete-btn,
+.grid-widget-item.memo-framed-item:focus-within .widget-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* 액자 모드에서 본문 텍스트 완전 숨김 */
+.grid-widget-item.memo-framed-item .memo-widget-textarea {
+  display: none !important;
+}
+
+/* GridBoard.css 맨 하단 memo widget 영역 */
+
+/* ❌ 기존의 bottom: 8px; right: 8px; 및 display: block 제거 */
+/* src/components/GridBoard.css 맨 하단 */
+
+/* 액자 모드 평상시: 푸터 숨김 */
+.grid-widget-item.memo-framed-item .memo-widget-footer-container {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* ⭐️ 액자 모드 Hover 시: display를 건드리지 않고 투명도만 1로 변경 */
+.grid-widget-item.memo-framed-item:hover .memo-widget-footer-container,
+.grid-widget-item.memo-framed-item:focus-within .memo-widget-footer-container {
+  opacity: 1;
+  pointer-events: auto;
+}

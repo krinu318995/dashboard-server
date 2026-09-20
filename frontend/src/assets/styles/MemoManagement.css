@@ -1,0 +1,450 @@
+/* src/assets/styles/memoManager.css */
+.memo-manager-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: #f8fafc;
+  color: #1e293b;
+  overflow: hidden;
+  /* max-height: calc(100vh - 60px); */
+}
+
+.memo-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.back-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #475569;
+}
+
+.back-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.create-memo-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.create-memo-btn:hover {
+  background-color: #1d4ed8;
+}
+
+.memo-manager-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.memo-list-sidebar {
+  width: 320px;
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.memo-search-wrapper {
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.memo-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+.memo-search-input:focus {
+  border-color: #3b82f6;
+}
+.memo-items-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.memo-list-card {
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  background-color: #ffffff;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.memo-list-card:hover {
+  background-color: #f8fafc;
+}
+
+.memo-list-card.active {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.badge-dashboard {
+  font-size: 10px;
+  background-color: #e0f2fe;
+  color: #0284c7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.card-preview {
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-date {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.memo-editor-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+}
+
+.editor-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px 32px;
+  box-sizing: border-box;
+}
+
+.editor-control-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.toggle-widget-btn {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+}
+
+.toggle-widget-btn.pinned {
+  background-color: #fef3c7;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
+.delete-btn {
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.editor-title-input {
+  border: none;
+  font-size: 24px;
+  font-weight: 700;
+  outline: none;
+  color: #0f172a;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.editor-textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.empty-memo-msg,
+.no-selection-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #94a3b8;
+  font-size: 14px;
+}
+/* 이미지 업로드 버튼 스타일 */
+.image-upload-btn {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+}
+
+.image-upload-btn:hover {
+  background-color: #e2e8f0;
+}
+
+/* 이미지 미리보기 래퍼 */
+.memo-editor-image-preview {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.memo-editor-image-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  margin: 0 auto; /* ⭕ 좌우 마진을 auto로 주어 가운데 정렬 */
+  justify-content: center; /* 가로 중앙 정렬 */
+  align-items: center; /* 세로 중앙 정렬 */
+}
+
+.memo-editor-image-del-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(15, 23, 42, 0.75);
+  color: #ffffff;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.memo-editor-image-del-btn:hover {
+  background-color: #ef4444;
+}
+.memo-editor-del-btn:active {
+  transform: scale(0.98);
+}
+/* DatePicker 필터 바 */
+.date-filter-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.date-input {
+  flex: 1;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: #334155;
+  background-color: #ffffff;
+  outline: none;
+}
+
+.date-input:focus {
+  border-color: #3b82f6;
+}
+
+.date-separator {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.filter-reset-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
+.filter-reset-btn:hover {
+  color: #ef4444;
+}
+
+/* 페이징 하단 바 */
+.pagination-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-top: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.page-nav-btn,
+.page-num-btn {
+  min-width: 28px;
+  height: 28px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-num-btn:hover:not(.active),
+.page-nav-btn:hover:not(:disabled) {
+  background-color: #f1f5f9;
+}
+
+.page-num-btn.active {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.memo-search-filter-control {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.memo-search-reset {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.memo-search-reset:hover {
+  color: #ef4444;
+}
+
+.memo-search-img-only {
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.memo-search-img-only input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #3b82f6; /* 체크 포인트 컬러 */
+}
+.memo-date-filter-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 8px;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.memo-date-filter-group:focus-within {
+  border-color: #6366f1;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.memo-date-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 11px;
+  font-family: inherit;
+  color: #475569;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+.memo-date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  padding: 0;
+  margin-left: 2px;
+}
+.memo-date-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.divider {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  user-select: none;
+}
