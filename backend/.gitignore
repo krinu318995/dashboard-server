@@ -1,0 +1,21 @@
+# 의존성 패키지
+node_modules/
+
+# 환경변수 및 비밀정보 (깃허브 노출 절대 방지)
+.env
+.env.local
+.env.*.local
+
+# 로그 파일
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# OS 생성 파일
+.DS_Store
+Thumbs.db
+
+# db connection pool
+db.js

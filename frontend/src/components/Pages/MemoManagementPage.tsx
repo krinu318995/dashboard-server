@@ -1,15 +1,24 @@
-import { useState, useMemo, memo, type ChangeEvent } from "react";
+import React, {
+  useState,
+  useMemo,
+  type ChangeEvent,
+  useEffect,
+  useRef,
+} from "react";
 import {
   type MemoItem,
   type Widget,
-  type MemoWidgetProps,
+  // type MemoWidgetProps,
   DEFAULT_SIZES,
   DEFAULT_POSITION,
-  type DashboardSharedProps,
+  // type DashboardSharedProps,
 } from "../../types/dashboard";
 import { useNavigate } from "react-router-dom";
 import "../../assets/styles/MemoManagement.css";
 import { paginate } from "../../utils/pagination";
+// import client from "../../api/client";
+import { memoApi } from "../../api/memoApi";
+import debounce from "lodash-es/debounce";
 interface MemoManagementPageProps {
   widgets: Widget[];
   setWidgets: React.Dispatch<React.SetStateAction<Widget[]>>;
@@ -37,6 +46,22 @@ export const MemoManagementPage = ({
   const [onlyWithImg, setOnlyWithImg] = useState<boolean>(false);
 
   const [selectedMemoId, setSelectedMemoId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const loadMemos = async () => {
+      try {
+        // const response = await client.get<MemoItem[]>("/memos");
+        const response = await memoApi.getMemos();
+        setMemos?.(response.data ?? response);
+      } catch (err) {
+        console.error(err, " 메모 데이터 호출 오류");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadMemos();
+  }, [setMemos]);
 
   //검색
 
@@ -72,42 +97,107 @@ export const MemoManagementPage = ({
     return memos?.find((m) => m.id === activeMemoId) || null;
   }, [memos, activeMemoId]);
 
-  const handleCreateNewMemo = () => {
-    const now = Date.now();
-    const newMemoId = `memo_${crypto.randomUUID()}`;
-    const newMemo: MemoItem = {
-      id: newMemoId,
-      title: "",
-      memoText: "",
-      createdAt: now,
-      updatedAt: now,
-    };
+  // const handleCreateNewMemo = () => {
+  //   const now = Date.now();
+  //   const newMemoId = `memo_${crypto.randomUUID()}`;
+  //   const newMemo: MemoItem = {
+  //     id: newMemoId,
+  //     title: "",
+  //     memoText: "",
+  //     createdAt: now,
+  //     updatedAt: now,
+  //   };
 
-    if (setMemos) {
-      setMemos((prev) => [newMemo, ...prev]);
+  //   if (setMemos) {
+  //     setMemos((prev) => [newMemo, ...prev]);
+  //   }
+
+  //   setActiveMemoId(newMemoId);
+  // };
+
+  const handleCreateNewMemo = async () => {
+    try {
+      const response = await memoApi.createMemo({
+        title: "",
+        memoText: "",
+      });
+
+      const newMemo = response.data as MemoItem;
+
+      const getRes = await memoApi.getMemos();
+      const updatedMemos = getRes.data ?? getRes;
+      setMemos?.(updatedMemos);
+
+      if (newMemo?.id) {
+        setActiveMemoId(newMemo.id);
+      }
+    } catch (err) {
+      console.error(err, "메모 생성 오류");
+      alert("메모 작성 중 오류가 발생하였습니다.");
     }
-
-    setActiveMemoId(newMemoId);
   };
+
+  // const handleUpdateMemo = (field: "title" | "memoText", value: string) => {
+  //   if (!activeMemoId || !setMemos) return;
+
+  //   const now = Date.now();
+
+  //   setMemos((prev) =>
+  //     prev.map((m) =>
+  //       m.id === activeMemoId
+  //         ? {
+  //             ...m,
+  //             [field]: value,
+  //             updatedAt: now,
+  //           }
+  //         : m,
+  //     ),
+  //   );
+  //   console.log(activeMemoId, "activeMemoId");
+  //   setWidgets((prev) =>
+  //     prev.map((w) => {
+  //       if (w.type === "memo" && w.data?.memo?.id === activeMemoId) {
+  //         return {
+  //           ...w,
+  //           data: {
+  //             memo: {
+  //               ...w.data.memo,
+  //               [field]: value,
+  //               updatedAt: now,
+  //             },
+  //           },
+  //         };
+  //       }
+
+  //       return w;
+  //     }),
+  //   );
+  // };
+
+  const debounceTimeRef = useRef(
+    debounce(async (id: string, filed: "title" | "memoText", value: string) => {
+      try {
+        await memoApi.updateMemo(id, { [filed]: value });
+      } catch (err) {
+        console.error(err, "디바운스 에러");
+      }
+    }, 500),
+  );
 
   const handleUpdateMemo = (field: "title" | "memoText", value: string) => {
     if (!activeMemoId || !setMemos) return;
 
-    const now = Date.now();
-
-    console.log();
     setMemos((prev) =>
       prev.map((m) =>
         m.id === activeMemoId
           ? {
               ...m,
               [field]: value,
-              updatedAt: now,
             }
           : m,
       ),
     );
-    console.log(activeMemoId, "activeMemoId");
+    // console.log(activeMemoId, "activeMemoId");
     setWidgets((prev) =>
       prev.map((w) => {
         if (w.type === "memo" && w.data?.memo?.id === activeMemoId) {
@@ -117,7 +207,6 @@ export const MemoManagementPage = ({
               memo: {
                 ...w.data.memo,
                 [field]: value,
-                updatedAt: now,
               },
             },
           };
@@ -126,22 +215,68 @@ export const MemoManagementPage = ({
         return w;
       }),
     );
+
+    debounceTimeRef.current(activeMemoId, field, value);
   }; //handleUpdateMemo
+
+  // const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file || !activeMemoId) return;
+  //   const reader = new FileReader();
+
+  //   reader.onloadend = () => {
+  //     const base64Str = reader.result as string;
+  //     const now = Date.now();
+
+  //     if (setMemos) {
+  //       setMemos((prev) =>
+  //         prev.map((m) =>
+  //           String(m.id) === String(activeMemoId)
+  //             ? { ...m, imageUrl: base64Str, updatedAt: now }
+  //             : m,
+  //         ),
+  //       );
+  //     } //end
+
+  //     setWidgets((prev) =>
+  //       prev.map((w) => {
+  //         if (
+  //           w.type === "memo" &&
+  //           w.data?.memo &&
+  //           String(w.data?.memo?.id) === String(activeMemoId)
+  //         ) {
+  //           return {
+  //             ...w,
+  //             data: {
+  //               ...w.data,
+  //               memo: {
+  //                 ...w.data?.memo,
+  //                 imageUrl: base64Str,
+  //                 updatedAt: now,
+  //               },
+  //             },
+  //           };
+  //         }
+  //         return w;
+  //       }),
+  //     );
+  //   };
+  //   reader.readAsDataURL(file);
+  // };
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeMemoId) return;
     const reader = new FileReader();
 
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       const base64Str = reader.result as string;
-      const now = Date.now();
 
       if (setMemos) {
         setMemos((prev) =>
           prev.map((m) =>
             String(m.id) === String(activeMemoId)
-              ? { ...m, imageUrl: base64Str, updatedAt: now }
+              ? { ...m, imageUrl: base64Str }
               : m,
           ),
         );
@@ -161,14 +296,19 @@ export const MemoManagementPage = ({
                 memo: {
                   ...w.data?.memo,
                   imageUrl: base64Str,
-                  updatedAt: now,
                 },
               },
             };
           }
           return w;
         }),
-      );
+      ); //setWidget
+
+      try {
+        await memoApi.updateMemo(activeMemoId, { imageUrl: base64Str });
+      } catch (err) {
+        console.error(err, " 이미지 업로드 실패");
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -193,16 +333,13 @@ export const MemoManagementPage = ({
         e.preventDefault();
 
         const reader = new FileReader();
-        reader.onloadend = () => {
+        reader.onloadend = async () => {
           const base64Str = reader.result as string;
-          const now = Date.now();
 
           if (setMemos) {
             setMemos((prev) =>
               prev.map((m) =>
-                m.id === activeMemoId
-                  ? { ...m, imageUrl: base64Str, updatedAt: now }
-                  : m,
+                m.id === activeMemoId ? { ...m, imageUrl: base64Str } : m,
               ),
             );
           } //end if
@@ -217,7 +354,6 @@ export const MemoManagementPage = ({
                     memo: {
                       ...w.data.memo,
                       imageUrl: base64Str,
-                      updatedAt: now,
                     },
                   },
                 };
@@ -225,7 +361,12 @@ export const MemoManagementPage = ({
 
               return w;
             }),
-          );
+          ); //setWidget
+          try {
+            await memoApi.updateMemo(activeMemoId, { imageUrl: base64Str });
+          } catch (err) {
+            console.error(err, "paste 실패");
+          }
         };
         reader.readAsDataURL(file);
         break;
@@ -234,8 +375,7 @@ export const MemoManagementPage = ({
   };
 
   const handleOnlyImg = () => {};
-  const handleDeleteImage = () => {
-    const now = Date.now();
+  const handleDeleteImage = async () => {
     if (!activeMemoId) {
       return;
     }
@@ -246,8 +386,7 @@ export const MemoManagementPage = ({
           m.id === activeMemoId
             ? {
                 ...m,
-                imageUrl: undefined,
-                updatedAt: now,
+                imageUrl: null as any,
               }
             : m,
         ),
@@ -263,15 +402,19 @@ export const MemoManagementPage = ({
               ...w.data,
               memo: {
                 ...w.data.memo,
-                imageUrl: undefined,
-                updatedAt: now,
+                imageUrl: null as any,
               },
             },
           };
         }
         return w;
       }),
-    );
+    ); //end setWidget
+    try {
+      await memoApi.updateMemo(activeMemoId, { imageUrl: null as any });
+    } catch (err) {
+      console.error(err, "이미지 삭제 실패");
+    }
   };
 
   const handleToggleDashboardWidget = (memo: MemoItem) => {
@@ -444,11 +587,14 @@ export const MemoManagementPage = ({
           </div>
 
           <div className="memo-items-scroll">
-            {currentMemos.map((memo) => {
+            {/* {currentMemos.map((memo) => {
+              const isOnDashboard = widgets.some(
+                (w) => w.type === "memo" && w.data?.memo?.id === memo.id,
+              ); */}
+            {memos.map((memo) => {
               const isOnDashboard = widgets.some(
                 (w) => w.type === "memo" && w.data?.memo?.id === memo.id,
               );
-
               return (
                 <div
                   key={memo.id}
