@@ -10,6 +10,8 @@ import {
   DEFAULT_POSITION,
 } from "../types/dashboard.ts";
 import { useNavigate } from "react-router-dom";
+import { memoApi } from "../api/memoApi.ts";
+import { CustomSelect } from "./CustomSelect.tsx";
 interface SidebarProps extends MemoStateProps {
   isOpen: boolean;
   setWidgets: setWidgetsType;
@@ -30,41 +32,58 @@ export const Sidebar = ({
   isOpen,
   setWidgets,
   widgets,
-  memos,
+  memos, //드롭다운에서 선택한 메모를 대시보드로 드롭할 때 사용
+  setMemos,
 }: SidebarProps) => {
   // const [memoList, setMemoList] = useState<Widget[]>([]);
   const [selectedMemoId, setSelectedMemoId] = useState<string>("");
-  const [selectedMemo, setSelectedMemo] = useState<string>("");
-  // const activeMemoWidgets = (widgets ?? []).filter((w) => w.type === "memo");
+  //사이드바에서 사용할 메모 데이터 상태
+  const [sidebarMemos, setSidebarMemos] = useState<MemoItem[]>([]);
+  const [memoVersion, setMemoVersion] = useState<number>(0); //메모 데이터 변경 감지용 상태
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
 
-  const memoList = (memos ?? [])
-    .map((m) => {
-      // const memoId = m.data?.memo?.id;
-      // const matchedMemo = (memos ?? []).find((memo) => memo.id === memoId);
-      // const memoData = matchedMemo || m.data?.memo;
+  const memoRefresh = () => {
+    setMemoVersion((v) => v + 1);
+  };
 
-      const memoId = m.id;
-      const matchedMemo = (memos ?? []).find((memo) => memo.id === memoId);
-      // const memoData = matchedMemo || m.data?.memo;
-      console.log("확인", matchedMemo);
-      // console.log("memoId: ", memoId);
-      // console.log("m.id:", m.id);
-      // console.log("m.matchedMemo:", matchedMemo);
-      // console.log("memoData:", memoData);
-      // if (!memoData) {
-      //   return; // 메모 데이터가 없는 경우 null 반환
-      // }
+  const fetchMemos = async (currentPage: number) => {
+    try {
+      const res = await memoApi.getMemos({
+        page: currentPage,
+        limit: 5,
+        search: "",
+      });
+      console.log(res.items, " Fetched Memos in Sidebar");
+      const items = res.items ?? (res as any).data.items;
+      console.log(items, "Fetched Memos items in Sidebar");
+      console.log(res, "Fetched res items in Sidebar");
+      setTotalPages(res.pagination.totalPage || 1);
 
-      return {
-        widgetId: m.id,
-        // type: m.type,
-        // ...memoData,
-        ...m,
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
-  console.log("memoList: ", memoList);
-  console.log("selectedMemoId: ", selectedMemoId);
+      setSidebarMemos(Array.isArray(items) ? items : []);
+    } catch (err) {
+      console.error("사이드바 메모 조회 실패:", err);
+    }
+  };
+  useEffect(() => {
+    if (isOpen) {
+      fetchMemos(currentPage);
+    }
+  }, [isOpen, memoVersion, currentPage]);
+
+  const memoSelectOptions = sidebarMemos.map((m) => {
+    const activeWidget = widgets.find(
+      (w) => w.type === "memo" && w.data?.memo?.id === m.id,
+    );
+
+    const liveTitle = activeWidget?.data?.memo?.title ?? m.title;
+
+    return {
+      value: m.id,
+      label: liveTitle?.trim() ? liveTitle : "제목 없는 메모",
+    };
+  });
+
   const navigate = useNavigate();
   if (!isOpen) {
     return null; //사이드바가 닫혀있으면 아무것도 렌더링하지 않음
@@ -82,50 +101,67 @@ export const Sidebar = ({
   };
   /**메모 위젯 */
   const handleMemoDragStart = (e: DragEvent, memo: MemoItem) => {
-    // e.dataTransfer.setData("text/widget-type", "memo");
-    const targetMemo = memoList.find((m) => m.id === memo.id);
-    console.log("targetMemo: ", targetMemo);
-    console.log("targetMemo.id: ", targetMemo?.id);
-    if (targetMemo) {
-      e.dataTransfer.setData("text/widget-type", "memo");
+    e.dataTransfer.setData("text/widget-type", "memo");
+    // const targetMemo = memoList.find((m) => m.id === memo.id);
 
-      const memoPayload = {
-        id: memo.id,
-        title: memo.title ?? "",
-        memoText: memo.memoText ?? Date.now(),
-        imageUrl: memo.imageUrl ?? Date.now(),
-      };
-      e.dataTransfer.setData(
-        "text/widget-memo-data",
-        JSON.stringify(memoPayload),
-      );
-    }
+    // if (targetMemo) {
+    //   e.dataTransfer.setData("text/widget-type", "memo");
+    // }
+    const memoPayload = {
+      id: memo.id,
+      title: memo.title ?? "",
+      memoText: memo.memoText ?? Date.now(),
+      imageUrl: memo.imageUrl ?? Date.now(),
+    };
+    e.dataTransfer.setData(
+      "text/widget-memo-data",
+      JSON.stringify(memoPayload),
+    );
   };
 
-  const handleCreateNewMemo = () => {
+  const handleCreateNewMemo = async () => {
     const now = Date.now();
-    const newMemoId = `memo_${crypto.randomUUID()}`;
+    // const newMemoId = `memo_${crypto.randomUUID()}`;
     const { w, h } = DEFAULT_SIZES.memo;
-    const newEmptyMemo = {
-      id: `Widget_${now}`,
-      type: "memo" as const,
-      x: DEFAULT_POSITION.x,
-      y: DEFAULT_POSITION.y,
-      w,
-      h,
-      title: "",
-      data: {
-        memo: {
-          id: newMemoId,
-          title: "",
-          memoText: "",
-          createdAt: now,
-          updatedAt: now,
-        },
-      },
-    };
 
-    setWidgets((prevWidgets: Widget[]) => [...prevWidgets, newEmptyMemo]);
+    try {
+      const memoData = await memoApi.createMemo({
+        title: "",
+        memoText: "",
+      });
+
+      const newMemo = memoData.data.data as MemoItem;
+      console.log(JSON.stringify(newMemo), "Created at Sidebar");
+      const newEmptyMemo = {
+        id: `Widget_${now}`,
+        type: "memo" as const,
+        x: DEFAULT_POSITION.x,
+        y: DEFAULT_POSITION.y,
+        w,
+        h,
+        title: "",
+        data: {
+          memo: {
+            id: newMemo.id,
+            title: newMemo.title,
+            memoText: newMemo.memoText,
+            createdAt: newMemo.createdAt,
+            updatedAt: newMemo.updatedAt,
+          },
+        },
+      };
+
+      setWidgets((prevWidgets: Widget[]) => [...prevWidgets, newEmptyMemo]);
+      setCurrentPage(1);
+      if (setMemos) {
+        setMemos((prev) => [newMemo, ...prev]);
+      }
+      // setSelectedMemoId(newMemo.id);
+      alert("생성완료");
+    } catch (err) {
+      console.error(err);
+      alert("메모 생성 중 오류가 발생하였습니다.");
+    }
   };
 
   return (
@@ -137,7 +173,10 @@ export const Sidebar = ({
             <li
               key={item.type}
               draggable
-              onClick={() => handleLinkClick(item.link)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLinkClick(item.link);
+              }}
               onDragStart={(e) => handleDragStart(e, item.type)}
             >
               {item.label}
@@ -146,23 +185,30 @@ export const Sidebar = ({
         </ul>
         <h4>메모</h4>
         <div className="sidebar-content-select-container">
-          <select
+          {/** 페이지네이션 넣을 select */}
+          <CustomSelect
             name="selectMemo"
-            id=""
             value={selectedMemoId}
-            onChange={(e) => setSelectedMemoId(e.target.value)}
-            style={{ padding: "6px", borderRadius: "4px" }}
-          >
-            <option value="">새 메모 작성</option>
-            {memoList.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.title}
-              </option>
-            ))}
-          </select>
+            onChange={(e) => setSelectedMemoId(e)}
+            placeholderOption="새 메모 작성"
+            // options={sidebarMemos.map((m) => ({
+            //   value: m.id,
+            //   label: m.title?.trim() ? m.title : "제목 없는 메모",
+            // }))}
+            options={memoSelectOptions}
+            currentPage={currentPage ?? 1}
+            totalPages={totalPages ?? 1}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
           {selectedMemoId === "" && (
-            <button onClick={handleCreateNewMemo}>새 메모 작성</button>
+            <button
+              className="sidebar-memo-btn-create"
+              onClick={handleCreateNewMemo}
+            >
+              새 메모 작성
+            </button>
           )}
+
           {selectedMemoId !== "" && (
             <div
               draggable

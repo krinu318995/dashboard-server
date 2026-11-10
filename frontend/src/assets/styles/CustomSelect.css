@@ -1,0 +1,137 @@
+/* ===================================================
+   CustomSelect 일체형 카드 컨테이너
+   =================================================== */
+.custom-select-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: #ffffff;
+  overflow: hidden; /* 상단 셀렉트와 하단 페이징이 하나의 둥근 모서리 공유 */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* 포커스 시 전체 박스에 하이라이트 부여 */
+.custom-select-container:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* ===================================================
+   상단 메모 셀렉트 박스
+   =================================================== */
+.custom-select-element {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  height: 36px;
+  padding: 0 32px 0 12px;
+  border: none; /* 컨테이너 테두리를 쓰므로 자체 테두리 제거 */
+  background-color: transparent;
+  /* 우측 단일 드롭다운 화살표 SVG */
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 11px;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-element:hover {
+  background-color: #f8fafc;
+}
+
+/* ===================================================
+   하단 페이징 결합 툴바 (Pagination.tsx 래핑 영역)
+   =================================================== */
+.custom-select-card-bottom {
+  background-color: #f8fafc;
+  border-top: 1px solid #f1f5f9; /* 상하 분할 구분선 */
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* Pagination.tsx 내부의 기본 여백(py-4 등) 무효화 및 한 줄 정렬 */
+.custom-select-card-bottom > div {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  gap: 4px !important;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ‹, › 이동 버튼 스타일 */
+.custom-select-card-bottom .page-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background-color: #ffffff;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.custom-select-card-bottom .page-nav-btn:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.custom-select-card-bottom .page-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background-color: #f8fafc;
+}
+
+/* 숫자 번호 버튼 스타일 */
+.custom-select-card-bottom .page-num-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.custom-select-card-bottom .page-num-btn:hover:not(.active) {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+/* 현재 활성화된 페이지 번호 강조 */
+.custom-select-card-bottom .page-num-btn.active {
+  background-color: #3b82f6;
+  color: #ffffff;
+  font-weight: 600;
+}

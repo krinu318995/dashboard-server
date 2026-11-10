@@ -79,6 +79,7 @@ function App() {
           setWidgets={setWidgets}
           widgets={widgets}
           memos={memos}
+          setMemos={setMemos}
         />
 
         <main className="grid-container-wrapper">

@@ -147,3 +147,10 @@
   background-color: #e2e8f0;
   color: #1e293b;
 }
+.sidebar-memo-btn-create {
+  background-color: #5077f5;
+  color: #ffffff;
+  border: 1px solid #5077f5;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(80, 119, 245, 0.15);
+}

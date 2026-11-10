@@ -1,0 +1,14 @@
+{
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "server": "npm run dev --prefix backend",
+    "client": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  }
+}

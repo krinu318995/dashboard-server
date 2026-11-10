@@ -4,20 +4,20 @@ import React, {
   type ChangeEvent,
   useEffect,
   useRef,
+  useCallback,
 } from "react";
 import {
   type MemoItem,
   type Widget,
-  // type MemoWidgetProps,
   DEFAULT_SIZES,
   DEFAULT_POSITION,
-  // type DashboardSharedProps,
 } from "../../types/dashboard";
 import { useNavigate } from "react-router-dom";
 import "../../assets/styles/MemoManagement.css";
-import { paginate } from "../../utils/pagination";
-// import client from "../../api/client";
+
 import { memoApi } from "../../api/memoApi";
+
+import { Pagination } from "../Pagination";
 import debounce from "lodash-es/debounce";
 interface MemoManagementPageProps {
   widgets: Widget[];
@@ -45,75 +45,67 @@ export const MemoManagementPage = ({
   //flag 역할
   const [onlyWithImg, setOnlyWithImg] = useState<boolean>(false);
 
-  const [selectedMemoId, setSelectedMemoId] = useState<string | null>(null);
+  const [selectedMemo, setSelectedMemo] = useState<MemoItem | null>(null);
+
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const loadMemos = async () => {
-      try {
-        // const response = await client.get<MemoItem[]>("/memos");
-        const response = await memoApi.getMemos();
-        setMemos?.(response.data ?? response);
-      } catch (err) {
-        console.error(err, " 메모 데이터 호출 오류");
-      } finally {
-        setLoading(false);
+  const [totalPage, setTotalPage] = useState<number>(1);
+
+  const loadMemos = async (currentPage: number, query: string) => {
+    try {
+      setLoading(true);
+
+      // const response = await client.get<MemoItem[]>("/memos");
+      const response = await memoApi.getMemos({
+        page: currentPage,
+        limit: 6,
+        search: query,
+      });
+
+      if (response?.items) {
+        setMemos?.(response.items);
+        setTotalPage(response.pagination.totalPage || 1);
       }
-    };
-    loadMemos();
-  }, [setMemos]);
 
-  //검색
+      setMemos?.(response.items ?? response);
+    } catch (err) {
+      console.error(err, " 메모 데이터 호출 오류");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredMemos = useMemo(() => {
-    if (!memos) return [];
+  const handleSelectMemo = async (memoId: string) => {
+    setActiveMemoId(memoId);
+    try {
+      const response = await memoApi.getMemoById(memoId);
+      setSelectedMemo(response);
+    } catch (err) {
+      console.error(err, "메모 상세 조회 실패");
+    }
+  };
 
-    return memos
-      ?.filter((m) => {
-        const matchedSearch =
-          m.title?.toLowerCase().includes(searchKeyword.toLocaleLowerCase()) ||
-          m.memoText?.toLowerCase().includes(searchKeyword.toLocaleLowerCase());
-        const memoDateStr = new Date(m.createdAt ?? Date.now())
-          .toISOString()
-          .split("T")[0];
+  // const selectedMemos = useMemo(() => {
+  //   return memos?.find((m) => m.id === activeMemoId) || null;
+  // }, [memos, activeMemoId]);
 
-        const matchesStartDate = !startDate || memoDateStr >= startDate;
-        const matchesEndDate = !endDate || memoDateStr <= endDate;
+  const debounceSearch = useCallback(
+    debounce((query: string) => {
+      setCurrentPage(1);
+      loadMemos(1, query);
+    }, 100),
+    [],
+  );
 
-        // flag 가 ture라면 실제 img의 유무를 확인하여 필터링
-        const matchesImgFilter = !onlyWithImg || !!m.imageUrl;
+  useEffect(() => {
+    loadMemos(currentPage, searchKeyword);
+  }, [currentPage]);
 
-        return (
-          matchedSearch &&
-          matchesEndDate &&
-          matchesStartDate &&
-          matchesImgFilter
-        );
-      })
-      .sort((a, b) => (b.updatedAt ?? 0) - (a.createdAt ?? 0));
-  }, [memos, searchKeyword, startDate, endDate, onlyWithImg]); //filteredMemos
-
-  const selectedMemos = useMemo(() => {
-    return memos?.find((m) => m.id === activeMemoId) || null;
-  }, [memos, activeMemoId]);
-
-  // const handleCreateNewMemo = () => {
-  //   const now = Date.now();
-  //   const newMemoId = `memo_${crypto.randomUUID()}`;
-  //   const newMemo: MemoItem = {
-  //     id: newMemoId,
-  //     title: "",
-  //     memoText: "",
-  //     createdAt: now,
-  //     updatedAt: now,
-  //   };
-
-  //   if (setMemos) {
-  //     setMemos((prev) => [newMemo, ...prev]);
-  //   }
-
-  //   setActiveMemoId(newMemoId);
-  // };
+  const handleSearchMemo = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchKeyword(value);
+    debounceSearch(value);
+  };
 
   const handleCreateNewMemo = async () => {
     try {
@@ -122,57 +114,23 @@ export const MemoManagementPage = ({
         memoText: "",
       });
 
-      const newMemo = response.data as MemoItem;
+      const newMemo = response.data.data as MemoItem;
 
       const getRes = await memoApi.getMemos();
-      const updatedMemos = getRes.data ?? getRes;
+      const updatedMemos = getRes.items ?? getRes;
       setMemos?.(updatedMemos);
 
       if (newMemo?.id) {
         setActiveMemoId(newMemo.id);
+
+        setCurrentPage(1);
+        await loadMemos(1, "");
       }
     } catch (err) {
       console.error(err, "메모 생성 오류");
       alert("메모 작성 중 오류가 발생하였습니다.");
     }
   };
-
-  // const handleUpdateMemo = (field: "title" | "memoText", value: string) => {
-  //   if (!activeMemoId || !setMemos) return;
-
-  //   const now = Date.now();
-
-  //   setMemos((prev) =>
-  //     prev.map((m) =>
-  //       m.id === activeMemoId
-  //         ? {
-  //             ...m,
-  //             [field]: value,
-  //             updatedAt: now,
-  //           }
-  //         : m,
-  //     ),
-  //   );
-  //   console.log(activeMemoId, "activeMemoId");
-  //   setWidgets((prev) =>
-  //     prev.map((w) => {
-  //       if (w.type === "memo" && w.data?.memo?.id === activeMemoId) {
-  //         return {
-  //           ...w,
-  //           data: {
-  //             memo: {
-  //               ...w.data.memo,
-  //               [field]: value,
-  //               updatedAt: now,
-  //             },
-  //           },
-  //         };
-  //       }
-
-  //       return w;
-  //     }),
-  //   );
-  // };
 
   const debounceTimeRef = useRef(
     debounce(async (id: string, filed: "title" | "memoText", value: string) => {
@@ -197,7 +155,7 @@ export const MemoManagementPage = ({
           : m,
       ),
     );
-    // console.log(activeMemoId, "activeMemoId");
+
     setWidgets((prev) =>
       prev.map((w) => {
         if (w.type === "memo" && w.data?.memo?.id === activeMemoId) {
@@ -218,51 +176,6 @@ export const MemoManagementPage = ({
 
     debounceTimeRef.current(activeMemoId, field, value);
   }; //handleUpdateMemo
-
-  // const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-  //   const file = e.target.files?.[0];
-  //   if (!file || !activeMemoId) return;
-  //   const reader = new FileReader();
-
-  //   reader.onloadend = () => {
-  //     const base64Str = reader.result as string;
-  //     const now = Date.now();
-
-  //     if (setMemos) {
-  //       setMemos((prev) =>
-  //         prev.map((m) =>
-  //           String(m.id) === String(activeMemoId)
-  //             ? { ...m, imageUrl: base64Str, updatedAt: now }
-  //             : m,
-  //         ),
-  //       );
-  //     } //end
-
-  //     setWidgets((prev) =>
-  //       prev.map((w) => {
-  //         if (
-  //           w.type === "memo" &&
-  //           w.data?.memo &&
-  //           String(w.data?.memo?.id) === String(activeMemoId)
-  //         ) {
-  //           return {
-  //             ...w,
-  //             data: {
-  //               ...w.data,
-  //               memo: {
-  //                 ...w.data?.memo,
-  //                 imageUrl: base64Str,
-  //                 updatedAt: now,
-  //               },
-  //             },
-  //           };
-  //         }
-  //         return w;
-  //       }),
-  //     );
-  //   };
-  //   reader.readAsDataURL(file);
-  // };
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -455,36 +368,15 @@ export const MemoManagementPage = ({
     }
   };
 
-  // const filteredMemos = useMemo(() => {
-  //   if (!memos) return [];
-  //   return memos
-  //     ?.filter((m) => {
-  //       const matchesSearch =
-  //         searchKeyword.trim() === "" ||
-  //         (m.title &&
-  //           m.title.toLowerCase().includes(searchKeyword.toLowerCase())) ||
-  //         m.memoText.toLowerCase().includes(searchKeyword.toLowerCase());
-
-  //       const memoDateStr = new Date(m.createdAt).toISOString().split("T")[0];
-  //       const matchesStartDate = !startDate || memoDateStr >= startDate;
-  //       const matchesEndDate = !endDate || memoDateStr <= endDate;
-
-  //       return matchesSearch && matchesStartDate && matchesEndDate;
-  //     })
-  //     .sort((a, b) => b.createdAt - a.createdAt);
-  // }, [memos, searchKeyword, startDate, endDate]);
-
-  //페이징
-
-  const {
-    currentItems: currentMemos,
-    totalPages,
-    pageNumbers,
-    hasNext,
-    hasPrev,
-  } = useMemo(() => {
-    return paginate(filteredMemos, currentPage, 6);
-  }, [filteredMemos, currentPage]);
+  // const {
+  //   currentItems: currentMemos,
+  //   totalPages,
+  //   pageNumbers,
+  //   hasNext,
+  //   hasPrev,
+  // } = useMemo(() => {
+  //   return paginate(filteredMemos, currentPage, 6);
+  // }, [filteredMemos, currentPage]);
   const resetFilters = () => {
     setSearchKeyword("");
     setStartDate("");
@@ -493,18 +385,36 @@ export const MemoManagementPage = ({
     setOnlyWithImg(false);
   };
 
-  const handleDeleteMemo = (memoId: String) => {
+  const handleDeleteMemo = async (memoId: string) => {
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     if (setMemos) {
       setMemos((prev) => prev.filter((m) => m.id !== memoId));
     }
 
-    //memo데이터가 없을 수 있으므로 옵셔널체이닝
-    setWidgets((prev) => prev.filter((w) => w.data?.memo?.id === memoId));
-    if (selectedMemoId === memoId) {
-      setSelectedMemoId(null);
-    } //삭제된 후 selectedMemoId가 빈 상태로 자동으로 변경되지 않기 때문에 추가
+    try {
+      await memoApi.deleteMemo(memoId);
+      alert("삭제되었습니다.");
+      //memo데이터가 없을 수 있으므로 옵셔널체이닝
+      setWidgets((prev) =>
+        prev.filter((w) => w.type === "memo" && w.data?.memo?.id === memoId),
+      );
+      if (selectedMemo?.id === memoId) {
+        setActiveMemoId("");
+        setSelectedMemo(null);
+      } //삭제된 후 selectedMemoId가 빈 상태로 자동으로 변경되지 않기 때문에 추가
+
+      const isLastItemOnPage = memos.length === 1 && currentPage > 1;
+      const targetPage = isLastItemOnPage ? currentPage - 1 : currentPage;
+
+      if (isLastItemOnPage) {
+        setCurrentPage(targetPage);
+      }
+      await loadMemos(targetPage, searchKeyword);
+    } catch (err) {
+      console.error(err, " 메모 삭제 실패");
+    }
   };
+
   return (
     <div className="memo-manager-container">
       {/* 상단 헤더 네비게이션 */}
@@ -532,10 +442,12 @@ export const MemoManagementPage = ({
               type="text"
               placeholder="검색"
               value={searchKeyword}
-              onChange={(e) => {
-                setSearchKeyword(e.target.value);
-                setCurrentPage(1);
-              }}
+              // onChange={(e) => {
+              //   setSearchKeyword(e.target.value);
+              //   setCurrentPage(1);
+              // }}
+              onChange={handleSearchMemo}
+              //handleSearchMemo
               className="memo-search-input"
             />
             <div className="memo-date-filter-group">
@@ -585,7 +497,6 @@ export const MemoManagementPage = ({
               </label>
             </div>
           </div>
-
           <div className="memo-items-scroll">
             {/* {currentMemos.map((memo) => {
               const isOnDashboard = widgets.some(
@@ -599,7 +510,7 @@ export const MemoManagementPage = ({
                 <div
                   key={memo.id}
                   className={`memo-list-card ${activeMemoId === memo.id ? "active" : ""}`}
-                  onClick={() => setActiveMemoId(memo.id)}
+                  onClick={() => handleSelectMemo(memo.id)}
                 >
                   <div className="card-top">
                     <h4 className="card-title">
@@ -620,14 +531,13 @@ export const MemoManagementPage = ({
                 </div>
               );
             })}
-            {filteredMemos.length === 0 && (
+            {memos.length === 0 && (
               <div className="empty-memo-msg">표시할 메모가 없습니다.</div>
             )}
           </div>
-
           {/**페이징 */}
           <div className="pagination-bar">
-            <button
+            {/* <button
               type="button"
               className="page-nav-btn"
               disabled={!hasPrev}
@@ -652,13 +562,18 @@ export const MemoManagementPage = ({
               onClick={() => setCurrentPage((prev) => prev + 1)}
             >
               &gt;
-            </button>
+            </button> */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPage}
+              onPageChange={(newPage) => setCurrentPage(newPage)}
+            />
           </div>
         </aside>
 
         {/* 우측: 상세 편집 뷰 */}
         <main className="memo-editor-main">
-          {selectedMemos ? (
+          {selectedMemo ? (
             <div className="editor-inner">
               <div className="editor-control-bar">
                 <label
@@ -680,32 +595,31 @@ export const MemoManagementPage = ({
                     widgets.some(
                       (w) =>
                         w.type === "memo" &&
-                        w.data?.memo?.id === selectedMemos.id,
+                        w.data?.memo?.id === selectedMemo.id,
                     )
                       ? "pinned"
                       : ""
                   }`}
-                  onClick={() => handleToggleDashboardWidget(selectedMemos)}
+                  onClick={() => handleToggleDashboardWidget(selectedMemo)}
                 >
                   {widgets.some(
                     (w) =>
-                      w.type === "memo" &&
-                      w.data?.memo?.id === selectedMemos.id,
+                      w.type === "memo" && w.data?.memo?.id === selectedMemo.id,
                   )
                     ? "📌 대시보드에서 내리기"
                     : "➕ 대시보드 위젯으로 추가"}
                 </button>
                 <button
                   className="delete-btn"
-                  onClick={() => handleDeleteMemo(selectedMemos.id)}
+                  onClick={() => handleDeleteMemo(selectedMemo.id)}
                 >
                   메모 영구 삭제
                 </button>
               </div>
               {/**image area */}
-              {selectedMemos.imageUrl && (
+              {selectedMemo.imageUrl && (
                 <div className="memo-editor-image-preview">
-                  <img src={selectedMemos.imageUrl} alt="첨부 이미지" />
+                  <img src={selectedMemo.imageUrl} alt="첨부 이미지" />
                   <button
                     className="memo-editor-image-del-btn"
                     type="button"
@@ -718,14 +632,14 @@ export const MemoManagementPage = ({
               <input
                 type="text"
                 className="editor-title-input"
-                value={selectedMemos.title}
+                value={selectedMemo.title}
                 onChange={(e) => handleUpdateMemo("title", e.target.value)}
                 placeholder="제목을 입력하세요..."
               />
 
               <textarea
                 className="editor-textarea"
-                value={selectedMemos.memoText}
+                value={selectedMemo.memoText}
                 onChange={(e) => handleUpdateMemo("memoText", e.target.value)}
                 placeholder="내용을 작성하세요..."
                 onPaste={handlePasteImage}

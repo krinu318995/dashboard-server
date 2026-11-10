@@ -20,7 +20,8 @@ import { WeatherWidget } from "../widgets/WeatherWidget.tsx";
 import { WeatherClockWidget } from "../widgets/WeatherClockWidget.tsx";
 import { MemoWidget } from "../widgets/MemoWidget.tsx";
 import { TodosWidget } from "../widgets/Todos.tsx";
-
+import { memoApi } from "../../api/memoApi";
+import debounce from "lodash-es/debounce";
 const createInitialData = (
   type: WidgetType,
   memoDataString: string | null,
@@ -111,6 +112,16 @@ export const GridBoard = ({
     );
   };
 
+  const debounceTimeRef = useRef(
+    debounce(async (id: string, filed: "title" | "memoText", value: string) => {
+      try {
+        await memoApi.updateMemo(id, { [filed]: value });
+      } catch (err) {
+        console.error(err, "디바운스 에러");
+      }
+    }, 500),
+  );
+
   const bringToFront = (widgetId: string) => {
     setWidgets((prev) => {
       const targetWidget = prev.find((w) => String(w.id) === String(widgetId));
@@ -185,41 +196,26 @@ export const GridBoard = ({
     }
 
     if (existingWidgetId) {
-      setWidgets(
-        (prevWidgets: Widget[]) => {
-          const targetWidget = prevWidgets.find(
-            (w) => String(w.id) === existingWidgetId,
-          );
-          if (!targetWidget) {
-            return prevWidgets;
-          }
-          const safeX = Math.min(
-            clampledX,
-            GRID_COLUMNS - (targetWidget.w || 1),
-          );
+      setWidgets((prevWidgets: Widget[]) => {
+        const targetWidget = prevWidgets.find(
+          (w) => String(w.id) === existingWidgetId,
+        );
+        if (!targetWidget) {
+          return prevWidgets;
+        }
+        const safeX = Math.min(clampledX, GRID_COLUMNS - (targetWidget.w || 1));
 
-          const updatedTargetWidget = {
-            ...targetWidget, //기존 위젯 크기 값 그대로 복사
-            x: Math.max(0, safeX), //위젯 이동시 좌표만 새 값으로
-            y: clampledY,
-          };
+        const updatedTargetWidget = {
+          ...targetWidget, //기존 위젯 크기 값 그대로 복사
+          x: Math.max(0, safeX), //위젯 이동시 좌표만 새 값으로
+          y: clampledY,
+        };
 
-          return [
-            ...prevWidgets.filter((w) => String(w.id) !== existingWidgetId),
-            updatedTargetWidget,
-          ];
-        },
-        // prevWidgets.map(
-        //   (w) =>
-        //     String(w.id) === existingWidgetId
-        //       ? {
-        //           ...w,
-        //           x: clampledX,
-        //           y: clampledY,
-        //         }
-        //       : w, //
-        // ),
-      );
+        return [
+          ...prevWidgets.filter((w) => String(w.id) !== existingWidgetId),
+          updatedTargetWidget,
+        ];
+      });
       return; //defaultW, defaultH 방지
     }
   }; //end handleDrop
@@ -229,17 +225,14 @@ export const GridBoard = ({
     targetWidgetId: string,
   ) => {
     const newTitle = e.target.value;
-    const now = Date.now();
     const targetWidget = widgets.find(
       (w) => String(w.id) === String(targetWidgetId),
     );
     const memoId = targetWidget?.data?.memo?.id;
-    // const createdAt = targetWidget?.data?.memo?.createdAt || now;
-    console.log(newTitle, "확인");
+
     if (!memoId) {
       return;
     }
-    console.log(memoId, "확인 memoId");
 
     setWidgets((prev) =>
       prev.map((w) => {
@@ -251,7 +244,6 @@ export const GridBoard = ({
               memo: {
                 ...w.data?.memo,
                 title: newTitle,
-                updatedAt: now,
               },
             },
           };
@@ -259,52 +251,26 @@ export const GridBoard = ({
         return w;
       }),
     ); //end setWidgets
-    console.log(targetWidget, "확인 targetWidget");
 
     if (setMemos) {
       setMemos((prev) =>
-        //   {
-        //   const targetWidget = widgets.find(
-        //     (w) => String(w.id) === String(targetWidgetId),
-        //   );
-
-        //   const exists = prev.some((m) => m.id === memoId);
-        //   if (exists) {
-        //     return prev.map((m) =>
-        //       m.id === memoId
-        //         ? {
-        //             ...m,
-        //             title: newTitle,
-        //             updatedAt: Date.now(),
-        //           }
-        //         : m,
-        //     );
-        //   }
-        //   return [
-        //     ...prev,
-        //     {
-        //       id: memoId,
-        //       title: newTitle,
-        //       memoText: targetWidget?.data?.memo?.memoText || "",
-        //       createdAt: createdAt,
-        //       updatedAt: now,
-        //     },
-        //   ];
-        // }
         prev.map((m) =>
           m.id === memoId
             ? {
                 ...m,
                 title: newTitle,
-                updatedAt: now,
               }
             : m,
         ),
       ); //end setMemos.
-
-      console.log();
     }
-  };
+
+    try {
+      memoApi.updateMemo(memoId, { title: newTitle });
+    } catch (err) {
+      console.error(err, " 메모 위젯 타이틀 변경 실패");
+    }
+  }; //end titleChange
 
   const handleResizeStart = (
     e: ReactMouseEvent,
@@ -436,11 +402,7 @@ export const GridBoard = ({
             {widget.type === "weather" && <WeatherWidget />}
             {widget.type === "clock" && <ClockWidgets />}
             {widget.type === "weather-clock" && <WeatherClockWidget />}
-            {/* {widget.type==='memo' && widget.data?.memoText && (
-            <div className='widget-memo-content' style={{marginTop:'auto'}}>
-            {widget.data.memoText}
-          </div>
-          )} */}
+
             {widget.type === "todo" && (
               <TodosWidget
                 widgets={widgets}
@@ -458,9 +420,7 @@ export const GridBoard = ({
                 setMemos={setMemos}
               />
             )}
-            {/* <div className="widget-info">
-            위치: ({widget.x}, {widget.y}) | 크기: {widget.w}x{widget.h}
-          </div> */}
+
             <div
               className="widget-resize-handle"
               draggable={false}

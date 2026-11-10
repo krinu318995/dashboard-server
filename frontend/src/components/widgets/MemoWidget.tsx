@@ -1,8 +1,10 @@
-import react, { useState } from "react";
+import react, { useState, useMemo, useRef } from "react";
 import "../../assets/styles/Memo.css";
 
 import type { MemoViewMode, MemoWidgetProps } from "../../types/dashboard.ts";
 import type { ChangeEvent, ClipboardEvent } from "react";
+import { memoApi } from "../../api/memoApi.ts";
+import debounce from "lodash-es/debounce";
 export const MemoWidget = ({
   widget,
   setWidgets,
@@ -25,8 +27,10 @@ export const MemoWidget = ({
     // field: "title" | "memoText",
   ) => {
     const newText = e.target.value;
-    const memoId = widget.data?.memo?.id || `memo_${crypto.randomUUID()}`;
-    const now = widget.data?.memo?.createdAt || Date.now();
+    const memoId = widget.data?.memo?.id;
+
+    if (!memoId) return;
+
     setWidgets((prevWidgets) =>
       prevWidgets.map((w) => {
         if (w.type === "memo" && w.data?.memo?.id === memoId) {
@@ -37,7 +41,6 @@ export const MemoWidget = ({
               memo: {
                 ...w.data.memo,
                 memoText: newText,
-                updatedAt: now,
               },
             },
           };
@@ -49,30 +52,14 @@ export const MemoWidget = ({
     if (setMemos) {
       setMemos(
         (prevMemos) => {
-          const exist = prevMemos.some((m) => String(m.id) === String(memoId));
-
-          if (exist) {
-            return prevMemos.map((memo) =>
-              String(memo.id === String(memoId))
-                ? {
-                    ...memo,
-                    memoText: newText,
-                    updatedAt: now,
-                  }
-                : memo,
-            );
-          }
-          return [
-            ...prevMemos,
-            {
-              id: memoId,
-              title: widget.data?.memo?.title || "",
-              memoText: newText,
-              imageUrl: widget.data?.memo?.imageUrl || "",
-              createdAt: now,
-              updatedAt: now,
-            },
-          ];
+          return prevMemos.map((m) =>
+            String(m.id) === String(memoId)
+              ? {
+                  ...m,
+                  memoText: newText,
+                }
+              : m,
+          );
         },
         //   {
         //   const exists = prevMemos.some((m) => m.id === memoId);
@@ -97,40 +84,53 @@ export const MemoWidget = ({
         // }
       );
     }
+    debounceTimeRef.current(memoId, "memoText", newText);
   }; //handleTextChange
 
+  const debounceTimeRef = useRef(
+    debounce(async (id: string, filed: "title" | "memoText", value: string) => {
+      try {
+        await memoApi.updateMemo(id, { [filed]: value });
+      } catch (err) {
+        console.error(err, "디바운스 에러");
+      }
+    }, 500),
+  );
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) {
+
+    const memoId = widget.data?.memo?.id;
+    if (!file || !memoId) {
       return;
     }
 
     const reader = new FileReader();
 
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       const base64Str = reader.result as string;
-      const memoId = widget.data?.memo?.id || `memo_${crypto.randomUUID()}`;
       setWidgets((prev) =>
-        prev.map((w) =>
-          String(w.id) === String(widget.id)
-            ? {
+        prev.map(
+          (w) => {
+            if (String(w.id) === String(widget.id)) {
+              if (!w.data?.memo) return w;
+
+              return {
                 ...w,
                 data: {
                   ...w.data,
                   memo: {
-                    ...(w.data?.memo || {
-                      id: memoId,
-                      createdAt: Date.now(),
-                      memoText: "",
-                    }),
+                    ...w.data.memo,
+                    id: memoId,
                     imageUrl: base64Str,
-                    updatedAt: Date.now(),
                   },
                 },
-              }
-            : w,
+              };
+            }
+            return w;
+          }, //end prev.map
         ),
-      ); // end setWidgets
+      );
+
       if (setMemos) {
         setMemos((prev) =>
           prev.map((m) =>
@@ -138,18 +138,39 @@ export const MemoWidget = ({
               ? {
                   ...m,
                   imageUrl: base64Str,
-                  updatedAt: Date.now(),
+                  // updatedAt: Date.now(),
                 }
               : m,
           ),
-        );
+        ); // end
       }
-    };
+
+      try {
+        await memoApi.updateMemo(memoId, { imageUrl: base64Str });
+      } catch (err) {
+        console.error(err, " 이미지 업로드 실패");
+      }
+    }; //end load
     reader.readAsDataURL(file);
   }; // end handleImageUpload
 
-  const handleDeleteImg = () => {
+  const handleDeleteImg = async () => {
     const memoId = widget.data?.memo?.id;
+
+    if (!memoId) return;
+
+    if (setMemos && memoId) {
+      setMemos((prev) =>
+        prev.map((m) =>
+          m.id === memoId
+            ? {
+                ...m,
+                imageUrl: undefined,
+              }
+            : m,
+        ),
+      );
+    }
     setWidgets((prev) =>
       prev.map((w) =>
         w.id === widget.id && w.data?.memo
@@ -160,7 +181,6 @@ export const MemoWidget = ({
                 memo: {
                   ...w.data.memo,
                   imageUrl: undefined,
-                  updatedAt: Date.now(),
                 },
               },
             }
@@ -168,18 +188,10 @@ export const MemoWidget = ({
       ),
     ); // end setWidgets
 
-    if (setMemos && memoId) {
-      setMemos((prev) =>
-        prev.map((m) =>
-          m.id === memoId
-            ? {
-                ...m,
-                imageUrl: undefined,
-                updatedAt: Date.now(),
-              }
-            : m,
-        ),
-      );
+    try {
+      await memoApi.updateMemo(memoId, { imageUrl: null as any });
+    } catch (err) {
+      console.error(err);
     }
   }; // end handleDeleteImg
   // ClipboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLDivElement> 어느 태그

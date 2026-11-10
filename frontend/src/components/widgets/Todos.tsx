@@ -8,7 +8,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import { format, setDate } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useRef, useState } from "react";
-
+import { taskApi } from "../../api/taskApi";
 interface TodosWidgetProps extends DashboardSharedProps {
   mode: "todos" | "dday" | "mini-calendar";
 }
@@ -75,10 +75,21 @@ export const TodosWidget = ({
     )
     .slice(0, 4);
 
-  const handleToggle = (taskId: string) => {
+  const handleToggle = async (taskId: string) => {
     if (!setTasks) {
       return;
     }
+    console.log("handleToggle called for taskId:", taskId);
+    const res = await taskApi.getTaskById(taskId);
+    console.log("setTasks:", setTasks);
+    console.log("getTaskById response:", res.data);
+    if (res.data.data.id === taskId) {
+      console.log("Task found:", res.data.data);
+      console.log("getTaskById response taskid:", res.data.data.id);
+
+      await taskApi.toggleTaskCompletion(taskId, currentDateStr);
+    }
+
     setTasks((prev) =>
       prev.map((task) => {
         if (task.id !== taskId) {
@@ -153,7 +164,7 @@ export const TodosWidget = ({
                           id={`checkbox-${t.id}`}
                           checked={isDone}
                           onChange={() => handleToggle(t.id)}
-                        />{" "}
+                        />
                         <label
                           htmlFor={`checkbox-${t.id}`}
                           className="custom-checkbox-box"
@@ -165,6 +176,7 @@ export const TodosWidget = ({
                           className="custom-title-text"
                         >
                           {t.title}
+                          {t.id}
                         </label>
                         {t.dueDate && (
                           <span className="todo-sub-date">

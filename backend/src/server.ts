@@ -8,6 +8,7 @@ dotenv.config();
 
 import pool from "./config/db";
 import memoRouter from "./routes/memoRoutes";
+import taskRouter from "./routes/taskRoutes";
 
 // const pool = require("./db");
 
@@ -17,9 +18,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json());
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+// app.use(express.json()); // 기본 한도(100kb)로 먼저 등록됨
+app.use(express.json({ limit: "200mb" }));
+app.use(express.urlencoded({ limit: "200mb", extended: true }));
 //http method get
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "백엔드 서버 구동 확인" });
@@ -44,6 +45,7 @@ app.get("/api/db-test", async (req, res) => {
 });
 
 app.use("/api/memos", memoRouter);
+app.use("/api/tasks", taskRouter);
 
 // app.get("/api/memos", async (req, res) => {
 //   try {

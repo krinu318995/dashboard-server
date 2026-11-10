@@ -1,7 +1,7 @@
 // src/types/dashboard.ts
 import type { Dispatch, SetStateAction } from "react";
 export type WidgetMode = "todos" | "dday" | "mini-calendar";
-export type taskStatus = "todo" | "in-progress" | "done";
+export type taskStatus = "in-progress" | "done";
 export type MemoViewMode = "normal" | "minimal-frame";
 
 export const DEFAULT_SIZES: Record<WidgetType, { w: number; h: number }> = {
@@ -58,13 +58,15 @@ export interface TaskItem {
   id: string;
   title: string;
   content: string;
-  // imageUrl?: string;
+  imageUrl?: string;
   startDate?: string;
   dueDate: string; // 예: "2026-08-04"
   isDday: boolean;
   status: taskStatus;
   completedDates?: string[]; //반복 일정
 }
+// 생성 요청 시 사용하는 타입 (id 제외)
+export type CreateTaskDTO = Omit<TaskItem, "id" | "completedDates">;
 
 export interface MemoItem {
   id: string; // 고유 메모 ID (위젯 생성 시 매핑)
@@ -121,4 +123,22 @@ export interface TodoWidgetProps extends BaseWidgetProps, TaskStateProps {
 export interface DashboardSharedProps extends MemoStateProps, TaskStateProps {
   widgets: Widget[];
   setWidgets: React.Dispatch<React.SetStateAction<Widget[]>>;
+}
+
+//페이징 처리
+
+export interface getMemosParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export interface PaginatedMemosRes {
+  items: MemoItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPage: number;
+  };
 }

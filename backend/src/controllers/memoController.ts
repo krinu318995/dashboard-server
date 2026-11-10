@@ -5,16 +5,84 @@ import { ResultSetHeader, RowDataPacket } from "mysql2";
 //promise가 있기 때문에 getMemos의 타입을 RequestHandler로 지정
 export const getMemos: RequestHandler = async (req, res): Promise<void> => {
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(`
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.max(1, Number(req.query.limit) || 10);
+
+    const search = ((req.query.search as string) || "").trim();
+    const offset = (page - 1) * limit;
+
+    const hasSearch = search.length > 0;
+    const searchPattern = `%${search}%`;
+
+    const whereClause = hasSearch
+      ? "WHERE (title LIKE :search OR memo_text LIKE :search)"
+      : "";
+
+    const countQuery = `SELECT COUNT(*) as total FROM memos ${whereClause}`;
+
+    const [countRow] = await pool.query<RowDataPacket[]>(
+      countQuery,
+      hasSearch
+        ? {
+            search: searchPattern,
+          }
+        : {},
+    );
+
+    const total = Number(countRow[0]?.total || 0);
+    const totalPage = Math.ceil(total / limit);
+
+    const listQuery = `
             SELECT id, title, memo_text as memoText, 
-            image_url as imageUrl, 
             created_at as createdAt,
             updated_at as updatedAt FROM memos
-            ORDER BY created_at DESC`);
-    res.json(rows);
+            ${whereClause}
+            ORDER BY created_at DESC
+            LIMIT ${Number(limit)} OFFSET ${Number(offset)}`;
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      listQuery,
+      hasSearch ? { search: searchPattern } : {},
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        items: rows,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPage,
+        },
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ err: "메모 목록 조회 실패" });
+  }
+};
+
+export const getMemoById: RequestHandler = async (req, res): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    const query = `
+              SELECT id, title, memo_text as memoText, 
+              image_url as imageUrl, 
+              created_at as createdAt,
+              updated_at as updatedAt FROM memos
+              where id = :id`;
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, { id });
+    if (rows.length === 0) {
+      res.status(404).json({ err: "메모를 찾을 수 없습니다." });
+      return;
+    }
+    res.status(200).json({ success: true, data: rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ err: "메모 조회 실패" });
   }
 };
 
@@ -90,5 +158,28 @@ export const createMemo = async (
   } catch (err) {
     console.error(err, " 메모 입력 오류");
     res.status(500).json({ err: "메모 생성 실패" });
+  }
+};
+
+export const deleteMemo: RequestHandler = async (req, res): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const query = "DELETE FROM memos WHERE id = :id";
+    const [result] = await pool.query<ResultSetHeader>(query, { id });
+
+    if (result.affectedRows === 0) {
+      res
+        .status(500)
+        .json({ success: false, err: "메모를 찾을 수 없습니다.." });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "메모 삭제가 완료되었습니다.",
+      deletedId: id,
+    });
+  } catch (err) {
+    console.error(err, "메모 삭제 실패");
+    res.status(500).json({ err: "메모 삭제 실패" });
   }
 };

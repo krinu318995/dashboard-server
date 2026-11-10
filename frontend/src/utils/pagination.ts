@@ -1,9 +1,9 @@
 export interface PaginationResult<T> {
   currentItems: T[];
   totalPages: number;
-  pageNumbers: number[];
-  hasNext: boolean;
-  hasPrev: boolean;
+  pageNumbers?: number[];
+  hasNext?: boolean;
+  hasPrev?: boolean;
 }
 
 export function paginate<T>(
@@ -29,4 +29,10 @@ export function paginate<T>(
     hasNext: safeCurrentPage < totalPages,
     hasPrev: safeCurrentPage > totalPages,
   };
+}
+
+export interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }
