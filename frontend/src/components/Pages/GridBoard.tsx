@@ -21,6 +21,7 @@ import { WeatherClockWidget } from "../widgets/WeatherClockWidget.tsx";
 import { MemoWidget } from "../widgets/MemoWidget.tsx";
 import { TodosWidget } from "../widgets/Todos.tsx";
 import { memoApi } from "../../api/memoApi";
+import { widgetApi } from "../../api/widgetApi.ts";
 import debounce from "lodash-es/debounce";
 const createInitialData = (
   type: WidgetType,
@@ -171,16 +172,15 @@ export const GridBoard = ({
 
     const memoDataString = e.dataTransfer.getData("text/widget-memo-data");
 
-    const now = Date.now();
-
     if (newWidgetType) {
       const { w: defaultW, h: defaultH } = DEFAULT_SIZES[newWidgetType] || {
         w: 2,
         h: 2,
       };
+      const newWidgetId = crypto.randomUUID();
 
       const newWidget: Widget = {
-        id: `Widget_${now}`,
+        id: newWidgetId,
         type: newWidgetType,
         x: clampledX,
         y: clampledY,
@@ -191,6 +191,7 @@ export const GridBoard = ({
         data: createInitialData(newWidgetType, memoDataString, memos),
       };
 
+      widgetApi.createWidget(newWidget);
       setWidgets((prevWidgets: Widget[]) => [...prevWidgets, newWidget]);
       return;
     }
@@ -210,7 +211,7 @@ export const GridBoard = ({
           x: Math.max(0, safeX), //위젯 이동시 좌표만 새 값으로
           y: clampledY,
         };
-
+        widgetApi.createWidget(updatedTargetWidget);
         return [
           ...prevWidgets.filter((w) => String(w.id) !== existingWidgetId),
           updatedTargetWidget,
@@ -288,26 +289,49 @@ export const GridBoard = ({
 
     const rect = gridRef.current.getBoundingClientRect();
     const columnWidth = rect.width / GRID_COLUMNS;
-
+    let finalW = initialW;
+    let finalH = initialH;
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
 
-      const newW = Math.max(1, initialW + Math.round(deltaX / columnWidth));
-      const newH = Math.max(1, initialH + Math.round(deltaY / ROW_HEIGHT));
+      finalW = Math.max(1, initialW + Math.round(deltaX / columnWidth));
+      finalH = Math.max(1, initialH + Math.round(deltaY / ROW_HEIGHT));
 
       setWidgets((prev) =>
-        prev.map((w) => (w.id === widgetId ? { ...w, w: newW, h: newH } : w)),
+        prev.map((w) =>
+          w.id === widgetId ? { ...w, w: finalW, h: finalH } : w,
+        ),
       );
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = async () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+
+      const target = widgets.find((w) => String(w.id) === String(widgetId));
+      if (target) {
+        try {
+          await widgetApi.createWidget({
+            ...target,
+            w: finalW,
+            h: finalH,
+          });
+        } catch (err) {
+          console.error(err, " resizing fail");
+        }
+      }
     };
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+  }; //end resize
+
+  const handleDelete = async (id: string) => {
+    await widgetApi.deleteWidget(id);
+    setWidgets((prevWidgets: Widget[]) =>
+      prevWidgets.filter((w) => String(w.id) !== String(id)),
+    );
   };
   return (
     <div
@@ -392,9 +416,7 @@ export const GridBoard = ({
               className="widget-delete-btn"
               onClick={(e) => {
                 e.stopPropagation();
-                setWidgets((prevWidgets: Widget[]) =>
-                  prevWidgets.filter((w) => w.id !== widget.id),
-                );
+                handleDelete(widget.id);
               }}
             >
               ×

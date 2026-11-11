@@ -8,68 +8,53 @@ import { MemoManagementPage } from "./components/Pages/MemoManagementPage.tsx";
 import "./App.css";
 import "./assets/styles/Layout.css";
 import { Routes, Route } from "react-router-dom";
+import { widgetApi } from "./api/widgetApi.ts";
+import { memoApi } from "./api/memoApi.ts";
+import { taskApi } from "./api/taskApi.ts";
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
-
-  const [widgets, setWidgets] = useState<Widget[]>(() => {
-    try {
-      const savedWidget = localStorage.getItem("myDashboard_widgets");
-      return savedWidget ? JSON.parse(savedWidget) : [];
-    } catch (err) {
-      console.error(err, " widget date get error");
-    }
-  });
-
+  const [widgets, setWidgets] = useState<Widget[]>([]);
+  const [globalTasks, setGlobalTasks] = useState<TaskItem[]>([]);
+  const [memos, setMemos] = useState<MemoItem[]>([]);
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
   };
-  /**2026.08.08. 로컬스토리지 작업 */
-  const [globalTasks, setGlobalTasks] = useState<TaskItem[]>(() => {
-    try {
-      const savedTask = localStorage.getItem("myDashboard_task");
-      return savedTask ? JSON.parse(savedTask) : [];
-    } catch (error) {
-      console.error("error:", error);
-      return [];
-    }
-  });
-
-  const [memos, setMemos] = useState<MemoItem[]>(() => {
-    try {
-      const savedMemo = localStorage.getItem("myDashboard_memo");
-      return savedMemo ? JSON.parse(savedMemo) : [];
-    } catch (err) {
-      console.error(err, " memo get error");
-      return [];
-    }
-  });
 
   useEffect(() => {
-    try {
-      localStorage.setItem("myDashboard_widgets", JSON.stringify(widgets));
-    } catch (err) {
-      console.error(err, " errer");
-    }
-  }, [widgets]);
-  /**task 저장 */
-  useEffect(() => {
-    try {
-      localStorage.setItem("myDashboard_task", JSON.stringify(globalTasks));
-    } catch (err) {
-      console.error("localStorage error", err);
-    }
-  }, [globalTasks]);
+    const fetchInitialData = async () => {
+      try {
+        const [widgetRes, memoRes, taskRes] = await Promise.all([
+          widgetApi.getWidgets(),
+          memoApi.getMemos(),
+          taskApi.getTasks(),
+        ]);
+        if (widgetRes) {
+          setWidgets(widgetRes);
+        }
+        console.log(widgetRes, "widgetRes");
 
-  /**메모 저장 */
-  useEffect(() => {
-    try {
-      localStorage.setItem("myDashboard_memo", JSON.stringify(memos));
-    } catch (err) {
-      console.error(err, " memo error");
-    }
-  }, [memos]);
+        console.log(memoRes, "memoRes");
+        const memoItems = memoRes.items ?? (memoRes as any).data.item ?? [];
+        setMemos(Array.isArray(memoItems) ? memoItems : []);
+        console.log(taskRes, "taskRes");
 
-  // useEffect(() => []);
+        if (taskRes) {
+          const normalizedTasks = taskRes.map((task: any) => ({
+            ...task,
+            isDday: Boolean(task.isDday),
+          }));
+          setGlobalTasks(normalizedTasks);
+          console.log(normalizedTasks, "normalizedTasks");
+
+          // console.log(taskRes, "taskRes");
+        }
+      } catch (err) {
+        console.log("데이터 불러오기 실패", err);
+      }
+    };
+    fetchInitialData();
+  }, []);
+
   return (
     <div className="app-container">
       <Header isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />

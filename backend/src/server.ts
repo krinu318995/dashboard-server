@@ -9,6 +9,7 @@ dotenv.config();
 import pool from "./config/db";
 import memoRouter from "./routes/memoRoutes";
 import taskRouter from "./routes/taskRoutes";
+import widgetRouter from "./routes/widgetRoutes";
 
 // const pool = require("./db");
 
@@ -46,6 +47,7 @@ app.get("/api/db-test", async (req, res) => {
 
 app.use("/api/memos", memoRouter);
 app.use("/api/tasks", taskRouter);
+app.use("/api/widgets", widgetRouter);
 
 // app.get("/api/memos", async (req, res) => {
 //   try {

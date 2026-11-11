@@ -12,6 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { memoApi } from "../api/memoApi.ts";
 import { CustomSelect } from "./CustomSelect.tsx";
+import { widgetApi } from "../api/widgetApi.ts";
 interface SidebarProps extends MemoStateProps {
   isOpen: boolean;
   setWidgets: setWidgetsType;
@@ -86,10 +87,10 @@ export const Sidebar = ({
 
   const navigate = useNavigate();
   if (!isOpen) {
-    return null; //사이드바가 닫혀있으면 아무것도 렌더링하지 않음
+    return null; //사이드바가 닫혀있으면 아무것도 렌c링하지 않음
   }
   /**일반 위젯 */
-  const handleDragStart = (e: DragEvent, widgetType: string) => {
+  const handleDragStart = async (e: DragEvent, widgetType: string) => {
     e.dataTransfer.setData("text/widget-type", widgetType); //그리드보드에서
   };
 
@@ -120,7 +121,7 @@ export const Sidebar = ({
   };
 
   const handleCreateNewMemo = async () => {
-    const now = Date.now();
+    // const now = Date.now();
     // const newMemoId = `memo_${crypto.randomUUID()}`;
     const { w, h } = DEFAULT_SIZES.memo;
 
@@ -130,10 +131,13 @@ export const Sidebar = ({
         memoText: "",
       });
 
+      const newWidgetId = crypto.randomUUID();
+
       const newMemo = memoData.data.data as MemoItem;
       console.log(JSON.stringify(newMemo), "Created at Sidebar");
       const newEmptyMemo = {
-        id: `Widget_${now}`,
+        // id: `Widget_${now}`,
+        id: newWidgetId,
         type: "memo" as const,
         x: DEFAULT_POSITION.x,
         y: DEFAULT_POSITION.y,
@@ -151,9 +155,12 @@ export const Sidebar = ({
         },
       };
 
+      await widgetApi.createWidget(newEmptyMemo);
       setWidgets((prevWidgets: Widget[]) => [...prevWidgets, newEmptyMemo]);
       setCurrentPage(1);
       if (setMemos) {
+        await widgetApi.createWidget(newEmptyMemo);
+
         setMemos((prev) => [newMemo, ...prev]);
       }
       // setSelectedMemoId(newMemo.id);

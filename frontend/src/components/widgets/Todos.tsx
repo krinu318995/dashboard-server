@@ -20,6 +20,7 @@ export const TodosWidget = ({
   const todayStr = new Date().toISOString().split("T")[0];
 
   const today = new Date(todayStr);
+  today.setHours(0, 0, 0, 0);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -53,7 +54,7 @@ export const TodosWidget = ({
 
   const calDday = (objDay: string) => {
     const dDay = new Date(objDay);
-
+    dDay.setHours(0, 0, 0, 0);
     const calTime = dDay.getTime() - today.getTime();
     const calDay = Math.ceil(calTime / (1000 * 60 * 60 * 24));
 
@@ -61,31 +62,48 @@ export const TodosWidget = ({
       return "D-DAY";
     } else if (calDay > 0) {
       return `D-${calDay}`;
+    } else {
+      return `D+${Math.abs(calDay)}`;
     }
   };
 
   const dDayTasks = tasks
     .filter((t) => {
+      const isDday =
+        Number(t.isDday ?? (t as any).is_dday) === 1 || t.isDday === true;
+
+      // console.log(t.isDday, " isdDay");
+      // console.log(t.dueDate, " duedate dday");
       const taskDate = new Date(t.dueDate);
 
-      return t.isDday === true && taskDate >= today && t.status !== "done";
+      taskDate.setHours(0, 0, 0, 0);
+
+      return isDday === true && taskDate >= today && t.status !== "done";
+
+      // return t.isDday === true && taskDate >= today && t.status !== "done";
     })
     .sort(
       (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
     )
     .slice(0, 4);
 
+  const isToday = currentDateStr === todayStr;
   const handleToggle = async (taskId: string) => {
+    if (!isToday) {
+      alert("오늘 날짜만 체크할 수 있습니다.");
+      return;
+    }
     if (!setTasks) {
       return;
     }
-    console.log("handleToggle called for taskId:", taskId);
+    // console.log("handleToggle called for taskId:", taskId);
     const res = await taskApi.getTaskById(taskId);
-    console.log("setTasks:", setTasks);
-    console.log("getTaskById response:", res.data);
+    // console.log("setTasks:", setTasks);
+    // console.log("getTaskById response:", res.data);
+
     if (res.data.data.id === taskId) {
-      console.log("Task found:", res.data.data);
-      console.log("getTaskById response taskid:", res.data.data.id);
+      // console.log("Task found:", res.data.data);
+      // console.log("getTaskById response taskid:", res.data.data.id);
 
       await taskApi.toggleTaskCompletion(taskId, currentDateStr);
     }
@@ -95,12 +113,20 @@ export const TodosWidget = ({
         if (task.id !== taskId) {
           return task;
         }
+        // console.log(taskId, " taskId");
+        // console.log(task.id, " task.id");
         const completed = task.completedDates || [];
         const isAlreadyDone = completed.includes(currentDateStr);
 
         const newCompletedDates = isAlreadyDone
           ? completed.filter((d) => d !== currentDateStr)
           : [...completed, currentDateStr];
+        console.log("[DEBUG TOGGLE RESULT]", {
+          currentDateStr,
+          isAlreadyDone,
+          before: completed,
+          after: newCompletedDates,
+        });
         return {
           ...task,
           completedDates: newCompletedDates,
@@ -163,7 +189,10 @@ export const TodosWidget = ({
                           type="checkbox"
                           id={`checkbox-${t.id}`}
                           checked={isDone}
-                          onChange={() => handleToggle(t.id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleToggle(t.id);
+                          }}
                         />
                         <label
                           htmlFor={`checkbox-${t.id}`}
@@ -176,7 +205,7 @@ export const TodosWidget = ({
                           className="custom-title-text"
                         >
                           {t.title}
-                          {t.id}
+                          {/* {t.id} */}
                         </label>
                         {t.dueDate && (
                           <span className="todo-sub-date">
