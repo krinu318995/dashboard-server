@@ -78,41 +78,33 @@ export const GridBoard = ({
   type WidgetMode = "todos" | "dday" | "mini-calendar";
   const modes: WidgetMode[] = ["todos", "dday", "mini-calendar"];
 
-  const handlePrev = (widgetId: string) => {
+  const updateTodoWidgetMode = (widgetId: string, step: -1 | 1) => {
     setWidgets((prev) =>
       prev.map((w) => {
-        if (w.id !== widgetId) {
-          return w;
-        }
-        const currentMode = w.mode || "todos";
-        const prevIdx =
-          (modes.indexOf(currentMode) - 1 + modes.length) % modes.length;
-
-        return {
-          ...w,
-          mode: modes[prevIdx],
-        };
-      }),
-    );
-  };
-
-  const handleNext = (widgetId: string) => {
-    setWidgets((prev) =>
-      prev.map((w) => {
-        if (String(w.id) !== widgetId) {
+        if (String(w.id) !== String(widgetId)) {
           return w;
         }
         const currentMode = w.mode || "todos";
         const nextIdx =
-          (modes.indexOf(currentMode) + 1 + modes.length) % modes.length;
-        return {
+          (modes.indexOf(currentMode) + step + modes.length) % modes.length;
+
+        const updatedWidget: Widget = {
           ...w,
           mode: modes[nextIdx],
         };
+
+        widgetApi
+          .createWidget(updatedWidget)
+          .catch((err) => console.error("위젯 모드 저장 실패 :", err));
+
+        return updatedWidget;
       }),
     );
   };
 
+  const handlePrev = (widgetId: string) => updateTodoWidgetMode(widgetId, -1);
+
+  const handleNext = (widgetId: string) => updateTodoWidgetMode(widgetId, 1);
   const debounceTimeRef = useRef(
     debounce(async (id: string, filed: "title" | "memoText", value: string) => {
       try {

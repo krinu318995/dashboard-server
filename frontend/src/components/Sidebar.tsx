@@ -96,6 +96,7 @@ export const Sidebar = ({
 
   /** todo */
   const handleLinkClick = (link?: string) => {
+    // alert(link);
     if (link) {
       navigate(link);
     }
@@ -103,16 +104,12 @@ export const Sidebar = ({
   /**메모 위젯 */
   const handleMemoDragStart = (e: DragEvent, memo: MemoItem) => {
     e.dataTransfer.setData("text/widget-type", "memo");
-    // const targetMemo = memoList.find((m) => m.id === memo.id);
 
-    // if (targetMemo) {
-    //   e.dataTransfer.setData("text/widget-type", "memo");
-    // }
     const memoPayload = {
       id: memo.id,
       title: memo.title ?? "",
-      memoText: memo.memoText ?? Date.now(),
-      imageUrl: memo.imageUrl ?? Date.now(),
+      memoText: memo.memoText ?? "",
+      imageUrl: memo.imageUrl ?? undefined,
     };
     e.dataTransfer.setData(
       "text/widget-memo-data",
@@ -121,8 +118,6 @@ export const Sidebar = ({
   };
 
   const handleCreateNewMemo = async () => {
-    // const now = Date.now();
-    // const newMemoId = `memo_${crypto.randomUUID()}`;
     const { w, h } = DEFAULT_SIZES.memo;
 
     try {
@@ -134,9 +129,7 @@ export const Sidebar = ({
       const newWidgetId = crypto.randomUUID();
 
       const newMemo = memoData.data.data as MemoItem;
-      console.log(JSON.stringify(newMemo), "Created at Sidebar");
       const newEmptyMemo = {
-        // id: `Widget_${now}`,
         id: newWidgetId,
         type: "memo" as const,
         x: DEFAULT_POSITION.x,
@@ -159,11 +152,9 @@ export const Sidebar = ({
       setWidgets((prevWidgets: Widget[]) => [...prevWidgets, newEmptyMemo]);
       setCurrentPage(1);
       if (setMemos) {
-        await widgetApi.createWidget(newEmptyMemo);
-
         setMemos((prev) => [newMemo, ...prev]);
       }
-      // setSelectedMemoId(newMemo.id);
+
       alert("생성완료");
     } catch (err) {
       console.error(err);
@@ -179,12 +170,16 @@ export const Sidebar = ({
           {WIDGET_LIBRARY_ITEMS.map((item) => (
             <li
               key={item.type}
-              draggable
+              draggable={item.type !== "memo-manager"}
               onClick={(e) => {
                 e.stopPropagation();
                 handleLinkClick(item.link);
               }}
-              onDragStart={(e) => handleDragStart(e, item.type)}
+              onDragStart={(e) => {
+                if (item.type !== "memo-manager") {
+                  handleDragStart(e, item.type);
+                }
+              }}
             >
               {item.label}
             </li>

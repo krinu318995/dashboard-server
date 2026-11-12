@@ -8,7 +8,7 @@ import { json } from "stream/consumers";
 export const getWidgets: RequestHandler = async (req, res): Promise<void> => {
   try {
     const [rows] = await pool.query<(WidgetRow & RowDataPacket)[]>(
-      "SELECT id, type, x, y, w, h, view_mode AS viewMode, data FROM widgets",
+      "SELECT id, type, x, y, w, h, view_mode AS viewMode, data, mode FROM widgets",
     );
 
     const parseData = rows.map((wRow) => ({
@@ -30,22 +30,24 @@ export const getWidgets: RequestHandler = async (req, res): Promise<void> => {
   }
 };
 export const createWidget: RequestHandler = async (req, res): Promise<void> => {
-  const { id, type, x, y, w, h, viewMode, data } = req.body as WidgetPayload;
+  const { id, type, x, y, w, h, viewMode, data, mode } =
+    req.body as WidgetPayload;
 
   //id, type, x, y, w, h, view_mode, data, updated_at
   try {
     const widgetId = id || crypto.randomUUID();
 
-    const query = `INSERT INTO widgets (id, type, x, y, w, h, view_mode, data)
-     values (:id, :type, :x, :y, :w, :h, :viewMode, :data)
+    const query = `INSERT INTO widgets (id, type, x, y, w, h, view_mode, data, mode)
+     values (:id, :type, :x, :y, :w, :h, :viewMode, :data, :mode)
      ON DUPLICATE KEY UPDATE
      x = VALUES(x), 
      y = VALUES(y),
      w = VALUES(w), 
      h = VALUES(h),
      view_mode = VALUES(view_mode),
+     mode = VALUES(mode),
      data = VALUES(data)`;
-
+    const resolvedMode = type === "todo" ? mode || "todos" : null;
     await pool.query<ResultSetHeader>(query, {
       id: widgetId,
       type: type || "default",
@@ -53,6 +55,7 @@ export const createWidget: RequestHandler = async (req, res): Promise<void> => {
       y: y ?? 0,
       w: w ?? 1,
       h: h ?? 1,
+      mode: resolvedMode,
       viewMode: type === "memo" ? viewMode || "normal" : null,
       data: data
         ? typeof data === "object"
@@ -72,6 +75,7 @@ export const createWidget: RequestHandler = async (req, res): Promise<void> => {
         w: w ?? 1,
         h: h ?? 1,
         viewMode: type === "memo" ? viewMode || "normal" : null,
+        mode: resolvedMode,
         data,
       },
     });

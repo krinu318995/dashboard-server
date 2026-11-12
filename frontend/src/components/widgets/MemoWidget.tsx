@@ -4,6 +4,7 @@ import "../../assets/styles/Memo.css";
 import type { MemoViewMode, MemoWidgetProps } from "../../types/dashboard.ts";
 import type { ChangeEvent, ClipboardEvent } from "react";
 import { memoApi } from "../../api/memoApi.ts";
+import { widgetApi } from "../../api/widgetApi.ts";
 import debounce from "lodash-es/debounce";
 export const MemoWidget = ({
   widget,
@@ -17,9 +18,13 @@ export const MemoWidget = ({
   // const [isEditing, setIsEditing] = useState(false);
 
   const handleModeChange = (mode: MemoViewMode) => {
+    const updatedWidget = { ...widget, viewMode: mode };
     setWidgets((prev) =>
       prev.map((w) => (w.id === widget.id ? { ...w, viewMode: mode } : w)),
     );
+    widgetApi.createWidget(updatedWidget).catch((err) => {
+      console.error("메모 뷰모드 저장 실패:", err);
+    });
   };
 
   const handleTextChange = (
@@ -195,11 +200,18 @@ export const MemoWidget = ({
     }
   }; // end handleDeleteImg
   // ClipboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLDivElement> 어느 태그
+
   const handlePaste = (
     e: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLDivElement>,
   ) => {
     const items = e.clipboardData?.items;
     if (!items) {
+      return;
+    }
+
+    const memoId = widget.data?.memo?.id;
+    if (!memoId) {
+      alert("문제가 발생하였습니다.");
       return;
     }
 
@@ -214,11 +226,15 @@ export const MemoWidget = ({
 
         const reader = new FileReader();
 
-        reader.onloadend = () => {
+        reader.onloadend = async () => {
           const base64Str = reader.result as string;
-          const memoId = widget.data?.memo?.id || `memo_${crypto.randomUUID()}`;
 
-          const now = widget.data?.memo?.createdAt || Date.now();
+          const updatedMemo = {
+            ...widget.data?.memo,
+            id: memoId,
+            imageUrl: base64Str,
+          };
+
           setWidgets((prev) =>
             prev.map((w) =>
               String(w.id) === String(widget.id)
@@ -226,15 +242,7 @@ export const MemoWidget = ({
                     ...w,
                     data: {
                       ...w.data,
-                      memo: {
-                        ...(w.data?.memo || {
-                          id: memoId,
-                          createdAt: Date.now(),
-                          memoText: w.data?.memo?.memoText || "",
-                        }),
-                        imageUrl: base64Str,
-                        updatedAt: Date.now(),
-                      },
+                      memo: updatedMemo,
                     },
                   }
                 : w,
@@ -242,44 +250,55 @@ export const MemoWidget = ({
           ); // end setWidgets
 
           if (setMemos) {
-            setMemos((prev) => {
-              const exists = prev.some((m) => m.id === memoId);
+            setMemos((prev) =>
+              prev.map((m) =>
+                m.id === memoId
+                  ? {
+                      ...m,
+                      imageUrl: base64Str,
+                    }
+                  : m,
+              ),
+            ); //setMemos
 
-              if (exists) {
-                return prev.map((m) =>
-                  m.id === memoId
-                    ? {
-                        ...m,
-                        imageUrl: base64Str,
-                        updatedAt: Date.now(),
-                      }
-                    : m,
-                );
-              }
-              return [
-                ...prev,
-                {
-                  id: memoId,
-                  title: widget.data?.memo?.title || "",
-                  memoText: widget.data?.memo?.memoText || "",
-                  imageUrl: base64Str,
-                  createdAt: now,
-                  updatedAt: Date.now(),
-                },
-              ];
-            }); //setMemos
+            // 로컬스토리지 사용하지 않기 때문에 수정
+            // setMemos((prev) => {
+            //   const exists = prev.some((m) => m.id === memoId);
+            //   if (exists) {
+            //     return prev.map((m) =>
+            //       m.id === memoId
+            //         ? {
+            //             ...m,
+            //             imageUrl: base64Str,
+            //             // updatedAt: Date.now(),
+            //           }
+            //         : m,
+            //     );
+            //   }
+            //   return [
+            //     ...prev,
+            //     {
+            //       id: memoId,
+            //       title: widget.data?.memo?.title || "",
+            //       memoText: widget.data?.memo?.memoText || "",
+            //       imageUrl: base64Str,
+            //       createdAt: now,
+            //       updatedAt: Date.now(),
+            //     },
+            //   ];
+            // }); //setMemos
           }
-          // return [
-          //   ...prev,
-          //   {
-          //     id: memoId,
-          //     title: widget.data?.memo?.title || "",
-          //     memoText: widget.data?.memo?.memoText || "",
-          //     imageUrl: base64Str,
-          //     createdAt: now,
-          //     updatedAt: Date.now(),
-          //   },
-          // ];
+
+          //db 반영
+          try {
+            await memoApi.updateMemo(memoId, {
+              title: widget.data?.memo?.title || "",
+              memoText: widget.data?.memo?.memoText || "",
+              imageUrl: base64Str,
+            });
+          } catch (err) {
+            console.error("오류가 발생하였습니다.", err);
+          }
         }; //end onloadend
 
         reader.readAsDataURL(file);

@@ -39,7 +39,9 @@ export const TodoModal: FC<TodoModalProps> = ({
     }
 
     if (selectedTask) {
-      const isDdayVal = selectedTask.isDday ?? selectedTask.isDday;
+      const isDdayVal =
+        selectedTask.isDday ?? (selectedTask.isDday as any).is_dday;
+
       setTitle(selectedTask.title);
       setContents(selectedTask.content);
       setImageUrl(selectedTask.imageUrl || "");
@@ -142,12 +144,8 @@ export const TodoModal: FC<TodoModalProps> = ({
     if (!selectedTask || !onDelete) {
       return;
     }
-    if (window.confirm("일정을 삭제하시겠습니까?")) {
-      // onDelete(selectedTask.id);
-      await taskApi.deleteTask(selectedTask.id);
-      alert("삭제되었습니다.");
-      onClose();
-    }
+    await taskApi.deleteTask(selectedTask.id);
+    onClose();
   };
   return (
     <div className="modal-overlay">
@@ -207,7 +205,7 @@ export const TodoModal: FC<TodoModalProps> = ({
             )}
             <DatePicker
               selected={dueDateObj}
-              onChange={(date: Date | null) => setDueDateObj(date)}
+              onChange={(date: Date | null) => date && setDueDateObj(date)}
               dateFormat="yyyy-MM-dd"
               locale={ko}
               className="custom-datepicker-input"

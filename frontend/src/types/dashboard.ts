@@ -19,28 +19,6 @@ export type WidgetType =
   | "weather"
   | "weather-clock";
 
-// export interface Widget {
-//   id: string;
-//   type: WidgetType;
-//   x: number;
-//   y: number;
-//   w: number;
-//   h: number;
-//   mode?: WidgetMode;
-//   viewMode?: MemoViewMode;
-
-//   data?: {
-//     tasks?: Array<{
-//       id: string;
-//       content: string;
-//       dueDate: string;
-//       status: taskStatus;
-//     }>;
-
-//     memo?: MemoItem;
-//   };
-// }
-
 export interface WeatherData {
   temp: number;
   condition: string;
@@ -71,9 +49,9 @@ export type CreateTaskDTO = Omit<TaskItem, "id" | "completedDates">;
 export interface MemoItem {
   id: string; // 고유 메모 ID (위젯 생성 시 매핑)
   title?: string; // 메모 제목
-  memoText: string; // 메모 본문 내용
+  memoText?: string; // 메모 본문 내용
   imageUrl?: string; // 첨부 이미지 base64 (선택적)
-  createdAt: number; // 생성 일시 (타임스탬프)
+  createdAt?: number; // 생성 일시 (타임스탬프)
   updatedAt?: number; // 수정 일시 (타임스탬프)
   isArchived?: boolean; // 보관/숨김 여부 (메모 관리 페이지 활용)
 }

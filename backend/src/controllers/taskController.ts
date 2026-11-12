@@ -27,23 +27,34 @@ export const getTasks: RequestHandler = async (req, res): Promise<void> => {
     const [tasks] = await pool.query<RowDataPacket[]>(query, params);
 
     console.log("Fetched tasks:", tasks);
-    // const task = tasks[0];
-    // const taskId = tasks.map((task) => task.id);
-    // const [completions] = await pool.query<RowDataPacket[]>(
-    //   `
-    //   SELECT task_id, completed_date FROM task_completions WHERE task_id IN (${taskId.join(",")})
-    // `,
-    //   [],
-    // );
 
-    // const completedDates = completions.map((completion) => {
-    //   const d = new Date(completion.completed_date);
-    //   return d.toISOString().split("T")[0];
-    // });
+    const completionsMap: Record<string, string[]> = {};
+
+    if (tasks.length > 0) {
+      const taskId = tasks.map((t) => t.id);
+      const [completions] = await pool.query<RowDataPacket[]>(
+        `SELECT task_id, DATE_FORMAT(completed_date, '%Y-%m-%d') as completedDate FROM 
+        task_completions WHERE task_id in (:taskId)`,
+        { taskId },
+      );
+
+      for (const row of completions) {
+        if (!completionsMap[row.task_id]) {
+          completionsMap[row.task_id] = [];
+        }
+        completionsMap[row.task_id].push(row.completedDate);
+      }
+    } //end if
+
+    const tasksWithCompletions = tasks.map((task) => ({
+      ...task,
+      completedDates: completionsMap[task.id] || [],
+    }));
+
     res.status(200).json({
       success: true,
       data: {
-        items: tasks,
+        items: tasksWithCompletions,
         // completions: completedDates,
       },
     });

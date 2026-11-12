@@ -21,4 +21,5 @@ export interface WidgetPayload {
   h: number;
   viewMode?: string;
   data?: any;
+  mode?: string;
 }

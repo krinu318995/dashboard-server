@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import "../../assets/styles/MemoManagement.css";
 
 import { memoApi } from "../../api/memoApi";
-
+import { widgetApi } from "../../api/widgetApi";
 import { Pagination } from "../Pagination";
 import debounce from "lodash-es/debounce";
 interface MemoManagementPageProps {
@@ -145,6 +145,9 @@ export const MemoManagementPage = ({
   const handleUpdateMemo = (field: "title" | "memoText", value: string) => {
     if (!activeMemoId || !setMemos) return;
 
+    setSelectedMemo((prev) =>
+      prev && prev.id === activeMemoId ? { ...prev, [field]: value } : prev,
+    );
     setMemos((prev) =>
       prev.map((m) =>
         m.id === activeMemoId
@@ -194,6 +197,15 @@ export const MemoManagementPage = ({
           ),
         );
       } //end
+
+      setSelectedMemo((prev) =>
+        prev?.id === activeMemoId
+          ? {
+              ...prev,
+              imageUrl: base64Str,
+            }
+          : prev,
+      );
 
       setWidgets((prev) =>
         prev.map((w) => {
@@ -257,6 +269,15 @@ export const MemoManagementPage = ({
             );
           } //end if
 
+          setSelectedMemo((prev) =>
+            prev?.id === activeMemoId
+              ? {
+                  ...prev,
+                  imageUrl: base64Str,
+                }
+              : prev,
+          );
+
           setWidgets((prev) =>
             prev.map((w) => {
               if (w.type === "memo" && w.data?.memo?.id === activeMemoId) {
@@ -292,6 +313,15 @@ export const MemoManagementPage = ({
     if (!activeMemoId) {
       return;
     }
+
+    setSelectedMemo((prev) =>
+      prev && prev.id === activeMemoId
+        ? {
+            ...prev,
+            imageUrl: null as any,
+          }
+        : prev,
+    );
 
     if (setMemos) {
       setMemos((prev) =>
@@ -330,19 +360,25 @@ export const MemoManagementPage = ({
     }
   };
 
-  const handleToggleDashboardWidget = (memo: MemoItem) => {
-    const isAlreadyOnDashboard = widgets.some(
+  const isWidgetPinned = (memoId: string): boolean => {
+    return widgets.some(
+      (widget) => widget.type === "memo" && widget.data?.memo?.id === memoId,
+    );
+  };
+
+  const handleToggleDashboardWidget = async (memo: MemoItem) => {
+    const isAlreadyOnDashboard = widgets.find(
       (w) => w.type === "memo" && w.data?.memo?.id === memo.id,
     );
-
     if (isAlreadyOnDashboard) {
+      await widgetApi.deleteWidget(isAlreadyOnDashboard.id);
       setWidgets((prev) =>
         prev.filter(
           (w) => !(w.type === "memo" && w.data?.memo?.id === memo.id),
         ),
       );
     } else {
-      const now = Date.now();
+      const newWidgetId = crypto.randomUUID();
       const { w, h } = DEFAULT_SIZES.memo;
       const newWidget: Widget = {
         w: w,
@@ -350,7 +386,7 @@ export const MemoManagementPage = ({
         x: DEFAULT_POSITION.x,
         y: DEFAULT_POSITION.y,
         viewMode: "normal",
-        id: `widget_${now}`,
+        id: newWidgetId,
         type: "memo",
         data: {
           memo: {
@@ -358,12 +394,10 @@ export const MemoManagementPage = ({
             title: memo.title,
             memoText: memo.memoText,
             imageUrl: memo.imageUrl,
-            createdAt: memo.createdAt,
-            updatedAt: memo.updatedAt,
           },
         },
       };
-
+      await widgetApi.createWidget(newWidget);
       setWidgets((prev) => [...prev, newWidget]);
     }
   };
@@ -396,7 +430,7 @@ export const MemoManagementPage = ({
       alert("삭제되었습니다.");
       //memo데이터가 없을 수 있으므로 옵셔널체이닝
       setWidgets((prev) =>
-        prev.filter((w) => w.type === "memo" && w.data?.memo?.id === memoId),
+        prev.filter((w) => !(w.type === "memo" && w.data?.memo?.id === memoId)),
       );
       if (selectedMemo?.id === memoId) {
         setActiveMemoId("");
@@ -521,7 +555,7 @@ export const MemoManagementPage = ({
                     )}
                   </div>
                   <p className="card-preview">
-                    {memo.memoText.trim() ? memo.memoText : "내용 없음"}
+                    {memo.memoText?.trim() ? memo.memoText : "내용 없음"}
                   </p>
                   <span className="card-date">
                     {new Date(
@@ -589,7 +623,6 @@ export const MemoManagementPage = ({
                   onChange={handleImageUpload}
                   style={{ display: "none" }}
                 />
-
                 <button
                   className={`toggle-widget-btn ${
                     widgets.some(
@@ -602,10 +635,7 @@ export const MemoManagementPage = ({
                   }`}
                   onClick={() => handleToggleDashboardWidget(selectedMemo)}
                 >
-                  {widgets.some(
-                    (w) =>
-                      w.type === "memo" && w.data?.memo?.id === selectedMemo.id,
-                  )
+                  {isWidgetPinned(selectedMemo.id)
                     ? "📌 대시보드에서 내리기"
                     : "➕ 대시보드 위젯으로 추가"}
                 </button>

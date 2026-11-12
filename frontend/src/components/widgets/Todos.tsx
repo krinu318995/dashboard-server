@@ -89,10 +89,10 @@ export const TodosWidget = ({
 
   const isToday = currentDateStr === todayStr;
   const handleToggle = async (taskId: string) => {
-    if (!isToday) {
-      alert("오늘 날짜만 체크할 수 있습니다.");
-      return;
-    }
+    // if (!isToday) {
+    //   alert("오늘 날짜만 체크할 수 있습니다.");
+    //   return;
+    // }
     if (!setTasks) {
       return;
     }
@@ -143,7 +143,12 @@ export const TodosWidget = ({
     if (!window.confirm("일정을 삭제하시겠습니까?")) {
       return;
     }
-    setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    try {
+      taskApi.deleteTask(taskId);
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    } catch (err) {
+      console.error("일정 삭제 실패 ", err);
+    }
   };
 
   return (
